@@ -1,0 +1,282 @@
+'use client';
+
+import { useEffect, useState, useCallback } from 'react';
+import { useSearchParams } from 'next/navigation';
+import { productsApi, categoriesApi } from '@/lib/api';
+import { useCart } from '@/contexts/CartContext';
+import { Button } from '@/components/ui/button';
+import { ShoppingCart, Filter } from 'lucide-react';
+import Image from 'next/image';
+import Link from 'next/link';
+import { toast } from 'sonner';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+
+type Product = {
+  _id: string;
+  id?: string;
+  name: string;
+  description: string | null;
+  price: number | null;
+  image_url: string | null;
+  store_type: 'home' | 'premium';
+  category_id: string | {
+    _id: string;
+    name: string;
+    slug: string;
+  } | null;
+};
+
+type Category = {
+  _id: string;
+  id?: string;
+  name: string;
+  slug: string;
+};
+
+export default function ProductsPage() {
+  const [products, setProducts] = useState<Product[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [selectedStore, setSelectedStore] = useState<string>('all');
+  const searchParams = useSearchParams();
+  const { addToCart } = useCart();
+
+  const loadCategories = useCallback(async () => {
+    try {
+      const data = await categoriesApi.getAll();
+      const formatted = data.map((cat: any) => ({
+        ...cat,
+        id: cat._id,
+      }));
+      setCategories(formatted);
+    } catch (error: any) {
+      console.error('Category load error:', error);
+      const errorMessage = error?.message || error?.toString() || 'Bilinmeyen hata';
+      
+      // MongoDB connection error için özel mesaj
+      if (errorMessage.includes('MongoDB') || errorMessage.includes('whitelist') || errorMessage.includes('Could not connect')) {
+        toast.error('MongoDB Bağlantı Hatası', {
+          description: 'IP adresiniz MongoDB Atlas whitelist\'inde değil. Lütfen MongoDB Atlas yönetim panelinden IP adresinizi ekleyin. Detaylar için MONGODB_IP_WHITELIST.md dosyasına bakın.',
+          duration: 15000,
+        });
+      }
+      // Diğer hatalar için silent fail
+    }
+  }, []);
+
+  const loadProducts = useCallback(async (category: string, store: string) => {
+    setLoading(true);
+    try {
+      const cat = categories.find((c) => c.slug === category);
+      
+      const params: any = { is_active: true };
+      if (category !== 'all' && cat) {
+        params.category_id = cat._id;
+      }
+      if (store !== 'all') {
+        params.store_type = store;
+      }
+
+      const data = await productsApi.getAll(params);
+      const formatted = data.map((product: any) => ({
+        ...product,
+        id: product._id,
+        categories: typeof product.category_id === 'object' ? product.category_id : null,
+      }));
+      setProducts(formatted);
+    } catch (error: any) {
+      console.error('Product load error:', error);
+      const errorMessage = error?.message || error?.toString() || 'Bilinmeyen hata';
+      
+      // MongoDB connection error için özel mesaj (sadece ilk hatada göster)
+      if (errorMessage.includes('MongoDB') || errorMessage.includes('whitelist') || errorMessage.includes('Could not connect')) {
+        toast.error('MongoDB Bağlantı Hatası', {
+          description: 'IP adresiniz MongoDB Atlas whitelist\'inde değil. Lütfen MongoDB Atlas yönetim panelinden IP adresinizi ekleyin. Detaylar için MONGODB_IP_WHITELIST.md dosyasına bakın.',
+          duration: 15000,
+        });
+      }
+      // Diğer hatalar için silent fail
+    } finally {
+      setLoading(false);
+    }
+  }, [categories]);
+
+  useEffect(() => {
+    loadCategories();
+  }, [loadCategories]);
+
+  useEffect(() => {
+    const category = searchParams.get('kategori');
+    const store = searchParams.get('magaza');
+
+    if (category) setSelectedCategory(category);
+    if (store) setSelectedStore(store);
+
+    loadProducts(category || 'all', store || 'all');
+  }, [searchParams, loadProducts]);
+
+  const handleAddToCart = useCallback((product: Product) => {
+    const categoryName = typeof product.category_id === 'object' 
+      ? product.category_id?.name 
+      : null;
+    
+    addToCart({
+      id: product._id || product.id || '',
+      name: product.name,
+      price: product.price,
+      image_url: product.image_url,
+      category: categoryName || 'Diğer',
+      store_type: product.store_type,
+    });
+  }, [addToCart]);
+
+  return (
+    <div className="pt-20 min-h-screen bg-gray-50">
+      <div className="bg-gradient-to-r from-[#0a0a0a] to-[#a42a2a] py-12">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <h1 className="text-4xl font-bold text-white mb-4">Ürünlerimiz</h1>
+          <p className="text-gray-200">
+            Kaliteli mobilya çözümlerimizi keşfedin
+          </p>
+        </div>
+      </div>
+
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="flex flex-col sm:flex-row gap-4 mb-8">
+          <div className="flex items-center gap-2 flex-1">
+            <Filter className="h-5 w-5 text-gray-500" />
+            <Select
+              value={selectedCategory}
+              onValueChange={(value) => {
+                setSelectedCategory(value);
+                loadProducts(value, selectedStore);
+              }}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Kategori Seçin" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Tüm Kategoriler</SelectItem>
+                {categories.map((cat) => (
+                  <SelectItem key={cat.id} value={cat.slug}>
+                    {cat.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <Select
+            value={selectedStore}
+            onValueChange={(value) => {
+              setSelectedStore(value);
+              loadProducts(selectedCategory, value);
+            }}
+          >
+            <SelectTrigger className="w-full sm:w-48">
+              <SelectValue placeholder="Mağaza Seçin" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Tüm Mağazalar</SelectItem>
+              <SelectItem value="home">Kavi Home</SelectItem>
+              <SelectItem value="premium">Kavi Premium</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        {loading ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+              <div
+                key={i}
+                className="bg-white rounded-xl overflow-hidden shadow-md"
+              >
+                <div className="h-64 bg-gray-200 animate-pulse" />
+                <div className="p-4 space-y-3">
+                  <div className="h-6 bg-gray-200 rounded animate-pulse" />
+                  <div className="h-4 bg-gray-200 rounded animate-pulse w-2/3" />
+                  <div className="h-8 bg-gray-200 rounded animate-pulse" />
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : products.length === 0 ? (
+          <div className="text-center py-16">
+            <p className="text-gray-500 text-lg">
+              Seçili filtrelere uygun ürün bulunamadı.
+            </p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {products.map((product) => (
+              <div
+                key={product._id || product.id}
+                className="bg-white rounded-xl overflow-hidden shadow-md hover:shadow-xl transition-all group"
+              >
+                <Link href={`/urunler/${product._id || product.id}`}>
+                  <div className="relative h-64 bg-gray-100 overflow-hidden">
+                    {product.image_url ? (
+                      <Image
+                        src={product.image_url}
+                        alt={product.name}
+                        fill
+                        className="object-cover group-hover:scale-110 transition-transform duration-300"
+                      />
+                    ) : (
+                      <div className="h-full flex items-center justify-center text-gray-400">
+                        Resim yok
+                      </div>
+                    )}
+                    <div className="absolute top-2 right-2">
+                      <span
+                        className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                          product.store_type === 'premium'
+                            ? 'bg-[#a42a2a] text-white'
+                            : 'bg-gray-800 text-white'
+                        }`}
+                      >
+                        {product.store_type === 'premium'
+                          ? 'Premium'
+                          : 'Home'}
+                      </span>
+                    </div>
+                  </div>
+                </Link>
+
+                <div className="p-4">
+                  <Link href={`/urunler/${product._id || product.id}`}>
+                    <h3 className="font-semibold text-lg mb-2 line-clamp-2 hover:text-[#a42a2a] transition-colors">
+                      {product.name}
+                    </h3>
+                  </Link>
+                  <p className="text-sm text-gray-500 mb-2">
+                    {product.categories?.name || 'Diğer'}
+                  </p>
+                  {product.price && (
+                    <p className="text-[#a42a2a] font-bold text-lg mb-3">
+                      {product.price.toLocaleString('tr-TR')} TL
+                    </p>
+                  )}
+                  <Button
+                    onClick={() => handleAddToCart(product)}
+                    className="w-full bg-[#0a0a0a] hover:bg-[#a42a2a] text-white"
+                  >
+                    <ShoppingCart className="h-4 w-4 mr-2" />
+                    Sepete Ekle
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
