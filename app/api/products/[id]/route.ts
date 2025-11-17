@@ -16,7 +16,7 @@ export async function GET(
       return NextResponse.json({ error: 'Ürün bulunamadı' }, { status: 404 });
     }
     
-    const productObj = { ...product };
+    const productObj: any = { ...product };
     if (product.category_id) {
       const category = await Category.findById(product.category_id)
         .select('name slug')
@@ -56,7 +56,7 @@ export async function PUT(
       return NextResponse.json({ error: 'Ürün bulunamadı' }, { status: 404 });
     }
     
-    const productObj = { ...product };
+    const productObj: any = { ...product };
     if (product.category_id) {
       const category = await Category.findById(product.category_id).lean();
       if (category) {
