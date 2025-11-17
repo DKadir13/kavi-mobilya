@@ -44,10 +44,66 @@ export async function POST(request: NextRequest) {
   try {
     await connectDB();
     const body = await request.json();
-    const category = await Category.create(body);
+
+    // Validasyon
+    if (!body.name || !body.name.trim()) {
+      return NextResponse.json(
+        { error: 'Kategori adı zorunludur' },
+        { status: 400 }
+      );
+    }
+
+    if (!body.slug || !body.slug.trim()) {
+      return NextResponse.json(
+        { error: 'Slug zorunludur' },
+        { status: 400 }
+      );
+    }
+
+    // Slug unique kontrolü
+    const existingCategory = await Category.findOne({ slug: body.slug.trim() });
+    if (existingCategory) {
+      return NextResponse.json(
+        { error: 'Bu slug zaten kullanılıyor. Lütfen farklı bir slug kullanın.' },
+        { status: 400 }
+      );
+    }
+
+    // Kategori verilerini hazırla
+    const categoryData = {
+      name: body.name.trim(),
+      slug: body.slug.trim(),
+      description: body.description?.trim() || null,
+      image_url: body.image_url?.trim() || null,
+      order_index: body.order_index !== undefined ? parseInt(body.order_index) : 0,
+    };
+
+    const category = await Category.create(categoryData);
+    
     return NextResponse.json(category, { status: 201 });
   } catch (error: any) {
     console.error('Categories POST API Error:', error);
+    
+    // MongoDB duplicate key hatası
+    if (error.code === 11000 || error.message?.includes('duplicate key')) {
+      return NextResponse.json(
+        { error: 'Bu slug zaten kullanılıyor. Lütfen farklı bir slug kullanın.' },
+        { status: 400 }
+      );
+    }
+
+    // Validation hatası
+    if (error.name === 'ValidationError') {
+      const validationErrors = Object.values(error.errors || {}).map((err: any) => err.message);
+      return NextResponse.json(
+        { 
+          error: 'Kategori bilgileri geçersiz',
+          details: validationErrors
+        },
+        { status: 400 }
+      );
+    }
+    
     return NextResponse.json(
       { 
         error: error.message || 'Kategori oluşturulurken bir hata oluştu',

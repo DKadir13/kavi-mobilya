@@ -86,9 +86,12 @@ export default function CategoriesPage() {
       setSubmitting(true);
 
     try {
+      // Slug kontrolü - boşsa otomatik oluştur
+      const slug = formData.slug.trim() || generateSlug(formData.name);
+      
       const categoryData = {
           name: formData.name.trim(),
-          slug: formData.slug.trim() || generateSlug(formData.name),
+          slug: slug,
           description: formData.description?.trim() || null,
           order_index: parseInt(formData.order_index) || 0,
       };
@@ -106,9 +109,11 @@ export default function CategoriesPage() {
 
       setDialogOpen(false);
       resetForm();
-      loadCategories();
+      await loadCategories();
       } catch (error: any) {
-        toast.error(error.message || 'Kategori kaydedilirken bir hata oluştu');
+        console.error('Category save error:', error);
+        const errorMessage = error.message || 'Kategori kaydedilirken bir hata oluştu';
+        toast.error(errorMessage);
       } finally {
         setSubmitting(false);
     }
