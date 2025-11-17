@@ -14,6 +14,7 @@ import {
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -210,6 +211,9 @@ export default function FeaturedProductsPage() {
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Öne Çıkan Ürün Ekle</DialogTitle>
+              <DialogDescription>
+                Ana sayfada gösterilecek öne çıkan ürünü seçin
+              </DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
               <div className="space-y-2">

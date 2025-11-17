@@ -9,6 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -181,6 +182,9 @@ export default function CategoriesPage() {
               <DialogTitle>
                 {editingCategory ? 'Kategori Düzenle' : 'Yeni Kategori Ekle'}
               </DialogTitle>
+              <DialogDescription>
+                {editingCategory ? 'Kategori bilgilerini güncelleyin' : 'Yeni kategori bilgilerini girin'}
+              </DialogDescription>
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">

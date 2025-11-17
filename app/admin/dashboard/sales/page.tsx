@@ -16,6 +16,7 @@ import {
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -232,6 +233,9 @@ export default function SalesPage() {
               <DialogTitle>
                 {editingSale ? 'Satış Düzenle' : 'Yeni Satış Ekle'}
               </DialogTitle>
+              <DialogDescription>
+                {editingSale ? 'Satış bilgilerini güncelleyin' : 'Yeni satış bilgilerini girin'}
+              </DialogDescription>
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">

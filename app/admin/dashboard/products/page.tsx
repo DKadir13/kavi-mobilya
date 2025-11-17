@@ -17,6 +17,7 @@ import {
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -230,18 +231,28 @@ export default function ProductsManagementPage() {
         body: formDataToSend,
       });
 
+      const data = await response.json();
+
       if (!response.ok) {
-        throw new Error('Dosya yükleme başarısız');
+        const errorMessage = data.error || 'Dosya yükleme başarısız';
+        const errorDetails = data.details ? `\n${data.details.join('\n')}` : '';
+        throw new Error(errorMessage + errorDetails);
       }
 
-      const data = await response.json();
       const newImages = [...formData.images, ...data.files];
       const updatedPreview = [...imagePreview, ...data.files];
       setFormData({ ...formData, images: newImages });
       setImagePreview(updatedPreview);
-      toast.success(`${data.files.length} resim başarıyla yüklendi`);
+      
+      let successMessage = `${data.files.length} resim başarıyla yüklendi`;
+      if (data.warnings && data.warnings.length > 0) {
+        successMessage += ` (${data.warnings.length} dosya atlandı)`;
+      }
+      toast.success(successMessage);
     } catch (error: any) {
-      toast.error(error.message || 'Resim yüklenirken bir hata oluştu');
+      const errorMessage = error.message || 'Resim yüklenirken bir hata oluştu';
+      toast.error(errorMessage);
+      console.error('Upload error:', error);
     } finally {
       setUploadingImages(false);
       // Input'u temizle
@@ -298,9 +309,9 @@ export default function ProductsManagementPage() {
               <DialogTitle>
                 {editingProduct ? 'Ürün Düzenle' : 'Yeni Ürün Ekle'}
               </DialogTitle>
-              <p className="text-sm text-gray-500 mt-1">
+              <DialogDescription>
                 {editingProduct ? 'Ürün bilgilerini güncelleyin' : 'Yeni ürün bilgilerini girin'}
-              </p>
+              </DialogDescription>
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
