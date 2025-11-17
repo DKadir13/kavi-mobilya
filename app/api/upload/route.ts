@@ -41,9 +41,9 @@ export async function POST(request: NextRequest) {
         continue;
       }
 
-      // Dosya boyutu kontrolü (max 5MB)
-      if (file.size > 5 * 1024 * 1024) {
-        errors.push(`${file.name}: Dosya boyutu çok büyük (max 5MB)`);
+      // Dosya boyutu kontrolü (max 10MB)
+      if (file.size > 10 * 1024 * 1024) {
+        errors.push(`${file.name}: Dosya boyutu çok büyük (max 10MB)`);
         continue;
       }
 
@@ -59,29 +59,13 @@ export async function POST(request: NextRequest) {
         const filepath = join(uploadDir, filename);
 
         // Dosyayı kaydet
-        try {
-          await writeFile(filepath, buffer);
-          
-          // Public URL'yi oluştur
-          const publicUrl = `/uploads/products/${filename}`;
-          uploadedFiles.push(publicUrl);
-        } catch (writeError: any) {
-          // Vercel veya read-only dosya sistemi hatası
-          if (writeError.code === 'EACCES' || writeError.code === 'EROFS' || writeError.message?.includes('read-only')) {
-            throw new Error('Dosya sistemi read-only. Vercel ortamında dosya yükleme desteklenmiyor. Lütfen cloud storage (S3, Cloudinary) kullanın.');
-          }
-          throw writeError;
-        }
+        await writeFile(filepath, buffer);
+        
+        // Public URL'yi oluştur
+        const publicUrl = `/uploads/products/${filename}`;
+        uploadedFiles.push(publicUrl);
       } catch (fileError: any) {
         console.error(`File upload error for ${file.name}:`, fileError);
-        // Eğer Vercel hatası ise, tüm işlemi durdur
-        if (fileError.message?.includes('read-only') || fileError.message?.includes('Vercel')) {
-          return NextResponse.json({ 
-            error: fileError.message,
-            code: 'VERCEL_FILE_SYSTEM_READONLY',
-            details: ['Vercel ortamında dosya sistemi read-only olduğu için dosya yükleme desteklenmiyor. Lütfen cloud storage (S3, Cloudinary, vb.) entegrasyonu yapın.']
-          }, { status: 500 });
-        }
         errors.push(`${file.name}: ${fileError.message || 'Yükleme hatası'}`);
       }
     }
@@ -121,13 +105,25 @@ export async function DELETE(request: NextRequest) {
     const filename = fileUrl.replace('/uploads/products/', '');
     const filepath = join(process.cwd(), 'public', 'uploads', 'products', filename);
 
-    // Dosyayı sil
-    const { unlink } = await import('fs/promises');
-    await unlink(filepath);
-
-    return NextResponse.json({ success: true, message: 'Dosya silindi' });
+    try {
+      // Dosyayı sil
+      const { unlink } = await import('fs/promises');
+      await unlink(filepath);
+      return NextResponse.json({ success: true, message: 'Dosya silindi' });
+    } catch (error: any) {
+      // Dosya bulunamadıysa hata verme (zaten silinmiş olabilir)
+      if (error.code === 'ENOENT') {
+        return NextResponse.json({ success: true, message: 'Dosya zaten silinmiş' });
+      }
+      console.error('File delete error:', error);
+      return NextResponse.json({ 
+        error: error.message || 'Dosya silinirken bir hata oluştu' 
+      }, { status: 500 });
+    }
   } catch (error: any) {
-    return NextResponse.json({ error: error.message || 'Dosya silinirken bir hata oluştu' }, { status: 500 });
+    console.error('Delete error:', error);
+    return NextResponse.json({ 
+      error: error.message || 'Dosya silinirken bir hata oluştu' 
+    }, { status: 500 });
   }
 }
-
