@@ -74,24 +74,37 @@ export default function ProductsManagementPage() {
   const loadData = useCallback(async () => {
     try {
       setLoading(true);
+      // Paralel yükleme - optimize edilmiş
       const [productsData, categoriesData] = await Promise.all([
         productsApi.getAll(),
         categoriesApi.getAll(),
       ]);
 
+      // Sadece gerekli alanları formatla
       const formattedProducts = productsData.map((p: any) => ({
-        ...p,
+        _id: p._id,
         id: p._id,
+        name: p.name,
+        description: p.description,
+        price: p.price,
+        image_url: p.image_url,
+        images: p.images || [],
+        store_type: p.store_type,
+        category_id: p.category_id,
+        is_featured: p.is_featured,
+        is_active: p.is_active,
       }));
 
       const formattedCategories = categoriesData.map((c: any) => ({
-        ...c,
+        _id: c._id,
         id: c._id,
+        name: c.name,
       }));
 
       setProducts(formattedProducts);
       setCategories(formattedCategories);
     } catch (error: any) {
+      console.error('Load data error:', error);
       toast.error('Veriler yüklenirken bir hata oluştu');
     } finally {
       setLoading(false);

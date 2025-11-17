@@ -21,9 +21,11 @@ export async function GET(request: NextRequest) {
     if (is_active === 'false') query.is_active = false;
 
     // Only select necessary fields for better performance
+    // Optimize: Sadece gerekli alanları seç, limit ekle
     const products: any[] = await Product.find(query)
       .select('name description price image_url images store_type category_id is_featured is_active featured_order created_at')
       .sort({ created_at: -1 })
+      .limit(1000) // Maksimum 1000 ürün (admin panel için yeterli)
       .lean();
     
     // Get all unique category IDs

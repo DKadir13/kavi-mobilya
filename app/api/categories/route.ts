@@ -5,9 +5,11 @@ import Category from '@/models/Category';
 export async function GET() {
   try {
     await connectDB();
+    // Optimize: Sadece gerekli alanları seç, limit ekle
     const categories = await Category.find()
       .select('name slug description image_url order_index')
       .sort({ order_index: 1 })
+      .limit(100) // Maksimum 100 kategori (admin panel için yeterli)
       .lean();
     
     const response = NextResponse.json(categories);

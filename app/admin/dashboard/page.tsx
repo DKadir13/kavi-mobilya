@@ -20,23 +20,29 @@ export default function AdminDashboardPage() {
       setLoading(true);
       const currentMonth = new Date().toISOString().slice(0, 7);
 
-      const [products, categories, allSales, monthlySales, recentSales] =
+      // Optimize: Sadece sayıları al, tüm verileri yükleme
+      const [products, categories, allSales, monthlySales] =
         await Promise.all([
           productsApi.getAll(),
           categoriesApi.getAll(),
           salesApi.getAll(),
           salesApi.getAll({ month: currentMonth }),
-          salesApi.getAll(),
         ]);
 
-      // Son 5 satışı al
-      const sortedRecentSales = recentSales
+      // Son 5 satışı al - sadece gerekli olanları
+      const sortedRecentSales = allSales
         .sort(
           (a: any, b: any) =>
             new Date(b.created_at || b.sale_date).getTime() -
             new Date(a.created_at || a.sale_date).getTime()
         )
-        .slice(0, 5);
+        .slice(0, 5)
+        .map((sale: any) => ({
+          _id: sale._id,
+          product_name: sale.product_name || 'Bilinmeyen',
+          sale_price: sale.sale_price,
+          sale_date: sale.sale_date || sale.created_at,
+        }));
 
       setStats({
         totalProducts: products.length,
@@ -46,6 +52,7 @@ export default function AdminDashboardPage() {
         recentSales: sortedRecentSales,
       });
     } catch (error: any) {
+      console.error('Load stats error:', error);
       // Silent fail - stats will show 0
     } finally {
       setLoading(false);
@@ -144,38 +151,26 @@ export default function AdminDashboardPage() {
             <div className="space-y-4">
               {stats.recentSales.map((sale: any) => {
                 const saleId = sale._id || sale.id || '';
-                const product =
-                  sale.product_id !== null && typeof sale.product_id === 'object'
-                    ? sale.product_id
-                    : null;
-                const productName = product?.name || 'Bilinmeyen Ürün';
-                const productStoreType = product?.store_type || '';
+                const productName = sale.product_name || 'Bilinmeyen Ürün';
+                const saleDate = sale.sale_date || sale.created_at;
 
                 return (
-                <div
+                  <div
                     key={saleId}
-                  className="flex items-center justify-between p-4 border rounded-lg"
-                >
-                  <div>
+                    className="flex items-center justify-between p-4 border rounded-lg"
+                  >
+                    <div>
                       <p className="font-medium">{productName}</p>
-                    <p className="text-sm text-gray-500">
-                        {productStoreType === 'premium'
-                        ? 'Kavi Premium'
-                        : 'Kavi Home'}
-                    </p>
-                    <p className="text-xs text-gray-400">
-                      {new Date(sale.sale_date).toLocaleDateString('tr-TR')}
-                    </p>
+                      <p className="text-xs text-gray-400">
+                        {new Date(saleDate).toLocaleDateString('tr-TR')}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-bold text-[#a42a2a]">
+                        {sale.sale_price?.toLocaleString('tr-TR') || '0'} TL
+                      </p>
+                    </div>
                   </div>
-                  <div className="text-right">
-                    <p className="font-bold text-[#a42a2a]">
-                      {sale.sale_price.toLocaleString('tr-TR')} TL
-                    </p>
-                    <p className="text-sm text-gray-500">
-                      Adet: {sale.quantity}
-                    </p>
-                  </div>
-                </div>
                 );
               })}
             </div>
