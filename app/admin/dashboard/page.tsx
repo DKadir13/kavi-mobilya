@@ -145,7 +145,7 @@ export default function AdminDashboardPage() {
               {stats.recentSales.map((sale: any) => {
                 const saleId = sale._id || sale.id || '';
                 const product =
-                  typeof sale.product_id === 'object'
+                  sale.product_id !== null && typeof sale.product_id === 'object'
                     ? sale.product_id
                     : null;
                 const productName = product?.name || 'Bilinmeyen Ürün';

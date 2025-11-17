@@ -50,7 +50,7 @@ export default function ProductDetailPage() {
       const formatted = {
         ...data,
         id: data._id,
-        categories: typeof data.category_id === 'object' ? data.category_id : null,
+        categories: data.category_id !== null && typeof data.category_id === 'object' ? data.category_id : null,
       };
 
       setProduct(formatted);
@@ -64,7 +64,7 @@ export default function ProductDetailPage() {
   const handleAddToCart = useCallback(() => {
     if (!product) return;
 
-    const categoryName = typeof product.category_id === 'object' 
+    const categoryName = product.category_id !== null && typeof product.category_id === 'object' 
       ? product.category_id?.name 
       : null;
 
@@ -138,7 +138,7 @@ export default function ProductDetailPage() {
                     ? 'Kavi Premium'
                     : 'Kavi Home'}
                 </span>
-                {product.category_id && typeof product.category_id === 'object' && (
+                {product.category_id !== null && typeof product.category_id === 'object' && (
                   <Link
                     href={`/urunler?kategori=${product.category_id.slug}`}
                     className="text-sm text-gray-600 hover:text-[#a42a2a] transition-colors"

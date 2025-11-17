@@ -27,13 +27,13 @@ export async function GET(request: NextRequest) {
       .lean();
     
     // Get all unique category IDs
-    const categoryIds = [
-      ...new Set(
+    const categoryIds = Array.from(
+      new Set(
         products
           .map((p) => p.category_id)
           .filter((id): id is string => !!id)
-      ),
-    ];
+      )
+    );
 
     // Fetch all categories in one query (only needed fields)
     const categories = await Category.find({
@@ -49,7 +49,7 @@ export async function GET(request: NextRequest) {
 
     // Populate category efficiently
     const productsWithCategories = products.map((product) => {
-      const productObj = { ...product };
+      const productObj: any = { ...product };
       if (product.category_id) {
         const category = categoryMap.get(product.category_id.toString());
         if (category) {

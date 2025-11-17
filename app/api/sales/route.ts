@@ -21,13 +21,13 @@ export async function GET(request: NextRequest) {
     const sales = await Sale.find(query).sort({ created_at: -1 }).lean();
     
     // Get all unique product IDs
-    const productIds = [
-      ...new Set(
+    const productIds = Array.from(
+      new Set(
         sales
           .map((s) => s.product_id)
           .filter((id): id is string => !!id)
-      ),
-    ];
+      )
+    );
 
     // Fetch all products in one query
     const products = await Product.find({
@@ -41,7 +41,7 @@ export async function GET(request: NextRequest) {
 
     // Populate product efficiently
     const salesWithProducts = sales.map((sale) => {
-      const saleObj = { ...sale };
+      const saleObj: any = { ...sale };
       if (sale.product_id) {
         const product = productMap.get(sale.product_id.toString());
         if (product) {

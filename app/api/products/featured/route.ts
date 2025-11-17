@@ -35,7 +35,7 @@ export async function GET() {
 
     // Populate category efficiently
     const productsWithCategories = products.map((product) => {
-      const productObj = { ...product };
+      const productObj: any = { ...product };
       if (product.category_id) {
         const category = categoryMap.get(product.category_id.toString());
         if (category) {

@@ -14,7 +14,7 @@ export async function GET(
       return NextResponse.json({ error: 'Satış bulunamadı' }, { status: 404 });
     }
     
-    const saleObj = { ...sale };
+    const saleObj: any = { ...sale };
     if (sale.product_id) {
       const product = await Product.findById(sale.product_id).lean();
       if (product) {
@@ -47,7 +47,7 @@ export async function PUT(
       return NextResponse.json({ error: 'Satış bulunamadı' }, { status: 404 });
     }
     
-    const saleObj = { ...sale };
+    const saleObj: any = { ...sale };
     if (sale.product_id) {
       const product = await Product.findById(sale.product_id).lean();
       if (product) {

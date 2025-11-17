@@ -89,7 +89,7 @@ export default function ProductsPage() {
       const formatted = data.map((product: any) => ({
         ...product,
         id: product._id,
-        categories: typeof product.category_id === 'object' ? product.category_id : null,
+        categories: product.category_id !== null && typeof product.category_id === 'object' ? product.category_id : null,
       }));
       setProducts(formatted);
     } catch (error: any) {
@@ -124,7 +124,7 @@ export default function ProductsPage() {
   }, [searchParams, loadProducts]);
 
   const handleAddToCart = useCallback((product: Product) => {
-    const categoryName = typeof product.category_id === 'object' 
+    const categoryName = product.category_id !== null && typeof product.category_id === 'object' 
       ? product.category_id?.name 
       : null;
     
