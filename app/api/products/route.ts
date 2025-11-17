@@ -5,18 +5,6 @@ import Category from '@/models/Category';
 
 export async function GET(request: NextRequest) {
   try {
-    // Validate MongoDB URI before connecting
-    const mongoUri = process.env.MONGODB_URI;
-    if (!mongoUri || (!mongoUri.startsWith('mongodb://') && !mongoUri.startsWith('mongodb+srv://'))) {
-      console.error('Invalid MongoDB URI format');
-      return NextResponse.json(
-        { 
-          error: 'MongoDB bağlantı yapılandırması hatalı. Lütfen MONGODB_URI environment variable\'ını kontrol edin.',
-        }, 
-        { status: 500 }
-      );
-    }
-
     await connectDB();
     const { searchParams } = new URL(request.url);
     const category_id = searchParams.get('category_id');

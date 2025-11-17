@@ -2,16 +2,18 @@ import mongoose from 'mongoose';
 
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://kavihomemobilya_db_user:Vy4tGlPZgjkGPFth@cluster0.rpfuter.mongodb.net/kavi_mobilya?retryWrites=true&w=majority&appName=Cluster0';
 
-// Validate MongoDB URI format
-if (!MONGODB_URI) {
-  console.error('MONGODB_URI is not defined!');
-  throw new Error('Lütfen .env.local veya .env dosyasında MONGODB_URI değişkenini tanımlayın');
-}
-
-// Validate URI format
-if (!MONGODB_URI.startsWith('mongodb://') && !MONGODB_URI.startsWith('mongodb+srv://')) {
-  console.error('Invalid MongoDB URI format:', MONGODB_URI.substring(0, 20) + '...');
-  throw new Error('MongoDB URI must start with "mongodb://" or "mongodb+srv://"');
+// Validate MongoDB URI format - only at runtime, not during build
+function validateMongoUri(uri: string): void {
+  if (!uri) {
+    throw new Error('MONGODB_URI is not defined!');
+  }
+  
+  // Trim whitespace that might come from environment variables
+  const trimmedUri = uri.trim();
+  
+  if (!trimmedUri.startsWith('mongodb://') && !trimmedUri.startsWith('mongodb+srv://')) {
+    throw new Error('MongoDB URI must start with "mongodb://" or "mongodb+srv://"');
+  }
 }
 
 // Log MongoDB URI (without password) for debugging - only in development
@@ -35,6 +37,14 @@ if (!global.mongoose) {
 }
 
 async function connectDB() {
+  // Validate URI only at runtime (when function is called), not during build
+  try {
+    validateMongoUri(MONGODB_URI);
+  } catch (error: any) {
+    console.error('MongoDB URI validation error:', error.message);
+    throw error;
+  }
+
   if (cached.conn) {
     return cached.conn;
   }
@@ -48,7 +58,10 @@ async function connectDB() {
       family: 4, // Use IPv4, skip trying IPv6
     };
 
-    cached.promise = mongoose.connect(MONGODB_URI, opts).then((mongoose) => {
+    // Trim URI in case there's whitespace
+    const trimmedUri = MONGODB_URI.trim();
+
+    cached.promise = mongoose.connect(trimmedUri, opts).then((mongoose) => {
       console.log('MongoDB connected successfully');
       return mongoose;
     }).catch((error) => {
