@@ -1,23 +1,27 @@
 'use client';
 
 import Link from 'next/link';
-import { Menu, ShoppingCart, X, Phone, MapPin } from 'lucide-react';
+import { Menu, ShoppingCart, X, Phone, MapPin, Search } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useCart } from '@/contexts/CartContext';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import CartSidebar from './CartSidebar';
 import CategorySidebar from './CategorySidebar';
 import Image from 'next/image';
-import { usePathname, useSearchParams } from 'next/navigation';
+import { usePathname, useSearchParams, useRouter } from 'next/navigation';
 
 export default function Navbar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [cartOpen, setCartOpen] = useState(false);
   const [categoriesOpen, setCategoriesOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchOpen, setSearchOpen] = useState(false);
   const { getTotalItems } = useCart();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const router = useRouter();
   
   // Premium sayfalarında premium logo kullan
   const magazaParam = searchParams?.get('magaza');
@@ -46,6 +50,15 @@ export default function Navbar() {
 
   // Ana sayfada gölge yok
   const isHomePage = pathname === '/';
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      router.push(`/urunler?search=${encodeURIComponent(searchQuery.trim())}`);
+      setSearchQuery('');
+      setSearchOpen(false);
+    }
+  };
 
   return (
     <>
@@ -108,6 +121,37 @@ export default function Navbar() {
             </div>
 
             <div className="flex items-center space-x-2">
+              {/* Arama Input - Desktop */}
+              <div className="hidden md:flex items-center">
+                <form onSubmit={handleSearch} className="relative">
+                  <Input
+                    type="text"
+                    placeholder="Ürün ara..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-64 h-9 pr-10 text-sm"
+                  />
+                  <Button
+                    type="submit"
+                    variant="ghost"
+                    size="icon"
+                    className="absolute right-0 top-0 h-9 w-9 text-gray-500 hover:text-[#a42a2a]"
+                  >
+                    <Search className="h-4 w-4" />
+                  </Button>
+                </form>
+              </div>
+
+              {/* Arama Butonu - Mobile */}
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setSearchOpen(!searchOpen)}
+                className="text-gray-700 hover:text-[#a42a2a] hover:bg-gray-50 md:hidden"
+              >
+                <Search className="h-5 w-5" />
+              </Button>
+
               <Button
                 variant="ghost"
                 size="icon"
@@ -146,6 +190,41 @@ export default function Navbar() {
             </div>
           </div>
         </div>
+
+        {/* Mobile Search Bar */}
+        {searchOpen && (
+          <div className="md:hidden bg-white border-t border-gray-200 px-4 py-3">
+            <form onSubmit={handleSearch} className="flex items-center gap-2">
+              <Input
+                type="text"
+                placeholder="Ürün ara..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="flex-1 h-9 text-sm"
+                autoFocus
+              />
+              <Button
+                type="submit"
+                size="sm"
+                className="bg-[#a42a2a] hover:bg-[#8a2222] h-9"
+              >
+                <Search className="h-4 w-4" />
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setSearchOpen(false);
+                  setSearchQuery('');
+                }}
+                className="h-9"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </form>
+          </div>
+        )}
 
         {mobileMenuOpen && (
           <div className="md:hidden bg-white border-t border-gray-200">

@@ -133,9 +133,18 @@ export default function ProductsPage() {
   useEffect(() => {
     const category = searchParams.get('kategori');
     const store = searchParams.get('magaza');
+    const searchParam = searchParams.get('search');
 
     if (category) setSelectedCategory(category);
     if (store) setSelectedStore(store);
+    
+    // URL'den gelen search parametresini set et
+    if (searchParam !== null) {
+      setSearchQuery(searchParam);
+    } else if (searchQuery && !searchParam) {
+      // URL'de search yoksa ama state'te varsa temizle
+      setSearchQuery('');
+    }
 
     loadProducts(category || 'all', store || 'all');
   }, [searchParams, loadProducts]);
