@@ -234,7 +234,9 @@ export default function ProductsPage() {
                     </h3>
                   </Link>
                   <p className="text-sm text-gray-500 mb-2">
-                    {product.categories?.name || 'Diğer'}
+                    {product.category_id !== null && typeof product.category_id === 'object' 
+                      ? product.category_id.name 
+                      : 'Diğer'}
                   </p>
                   {product.price && (
                     <p className="text-[#a42a2a] font-bold text-lg mb-3">
