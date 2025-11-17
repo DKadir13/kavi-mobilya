@@ -9,19 +9,20 @@ const JWT_SECRET = process.env.JWT_SECRET || 'kavi-mobilya-secret-key-change-in-
 export async function POST(request: NextRequest) {
   try {
     await connectDB();
-    const { email, password } = await request.json();
+    const { username, password } = await request.json();
 
-    if (!email || !password) {
+    if (!username || !password) {
       return NextResponse.json(
-        { error: 'E-posta ve şifre gereklidir' },
+        { error: 'Kullanıcı adı ve şifre gereklidir' },
         { status: 400 }
       );
     }
 
-    const user = await AdminUser.findOne({ email });
+    // Email alanını username olarak kullan (geriye dönük uyumluluk için)
+    const user = await AdminUser.findOne({ email: username });
     if (!user) {
       return NextResponse.json(
-        { error: 'Geçersiz e-posta veya şifre' },
+        { error: 'Geçersiz kullanıcı adı veya şifre' },
         { status: 401 }
       );
     }
@@ -29,13 +30,13 @@ export async function POST(request: NextRequest) {
     const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid) {
       return NextResponse.json(
-        { error: 'Geçersiz e-posta veya şifre' },
+        { error: 'Geçersiz kullanıcı adı veya şifre' },
         { status: 401 }
       );
     }
 
     const token = jwt.sign(
-      { userId: user._id, email: user.email, role: user.role },
+      { userId: user._id, username: user.email, email: user.email, role: user.role },
       JWT_SECRET,
       { expiresIn: '7d' }
     );
@@ -43,6 +44,7 @@ export async function POST(request: NextRequest) {
     const response = NextResponse.json({
       user: {
         id: user._id,
+        username: user.email,
         email: user.email,
         full_name: user.full_name,
         role: user.role,

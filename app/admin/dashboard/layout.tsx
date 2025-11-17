@@ -33,9 +33,10 @@ export default function AdminLayout({
     // Önce localStorage kontrolü (statik admin için) - sadece client-side
     if (typeof window !== 'undefined') {
       const adminAuth = localStorage.getItem('admin_auth');
+      const adminUsername = localStorage.getItem('admin_username');
       const adminEmail = localStorage.getItem('admin_email');
       
-      if (adminAuth === 'true' && adminEmail) {
+      if (adminAuth === 'true' && (adminUsername || adminEmail)) {
         const adminUser = localStorage.getItem('admin_user');
         if (adminUser) {
           setUser(JSON.parse(adminUser));
@@ -81,6 +82,7 @@ export default function AdminLayout({
   const handleLogout = async () => {
     // LocalStorage'ı temizle
     localStorage.removeItem('admin_auth');
+    localStorage.removeItem('admin_username');
     localStorage.removeItem('admin_email');
     localStorage.removeItem('admin_user');
     localStorage.removeItem('admin_token');
@@ -170,7 +172,7 @@ export default function AdminLayout({
           <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-white/10">
             <div className="mb-3 px-4">
               <p className="text-sm text-gray-400">Oturum açan</p>
-              <p className="text-sm font-medium truncate">{user?.email}</p>
+              <p className="text-sm font-medium truncate">{user?.username || user?.email || 'Admin'}</p>
             </div>
             <Button
               onClick={handleLogout}

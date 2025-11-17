@@ -80,3 +80,144 @@
     @apply bg-background text-foreground;
   }
 }
+
+@layer utilities {
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .animate-fade-in {
+    animation: fade-in 0.8s ease-out;
+  }
+
+  .animate-fade-in-delay {
+    animation: fade-in 0.8s ease-out 0.2s both;
+  }
+
+  .animate-fade-in-delay-2 {
+    animation: fade-in 0.8s ease-out 0.4s both;
+  }
+
+  .animate-fade-in-delay-3 {
+    animation: fade-in 0.8s ease-out 0.6s both;
+  }
+
+  /* Carousel smooth transitions */
+  [data-embla-container] {
+    transition: transform 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  /* Logo fade-in animation */
+  @keyframes logo-fade-in {
+    0% {
+      opacity: 0;
+      transform: scale(0.8) translateY(20px);
+    }
+    50% {
+      opacity: 0.5;
+      transform: scale(0.95) translateY(10px);
+    }
+    100% {
+      opacity: 1;
+      transform: scale(1) translateY(0);
+    }
+  }
+
+  .animate-logo-fade-in {
+    animation: logo-fade-in 1.5s ease-out;
+  }
+
+  /* Logo expand animation */
+  @keyframes logo-expand {
+    0% {
+      transform: scale(1);
+    }
+    100% {
+      transform: scale(10);
+    }
+  }
+
+  /* Text slide up animation */
+  @keyframes text-slide-up {
+    0% {
+      opacity: 0;
+      transform: translateY(30px);
+    }
+    100% {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .animate-text-slide-up {
+    animation: text-slide-up 1s ease-out 1s both;
+  }
+
+  /* Navbar logo fade-in */
+  @keyframes navbar-logo-fade {
+    0% {
+      opacity: 0;
+      transform: scale(0.9);
+    }
+    100% {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
+  .animate-navbar-logo-fade {
+    animation: navbar-logo-fade 1s ease-out 2s both;
+  }
+
+  /* Fade in up animation */
+  @keyframes fade-in-up {
+    from {
+      opacity: 0;
+      transform: translateY(30px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .animate-fade-in-up {
+    animation: fade-in-up 0.6s ease-out both;
+  }
+
+  /* Scroll reveal animation */
+  @keyframes scroll-reveal {
+    from {
+      opacity: 0;
+      transform: translateY(50px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .scroll-reveal {
+    opacity: 0;
+    animation: scroll-reveal 0.8s ease-out forwards;
+  }
+
+  .scroll-reveal-delay-1 {
+    animation-delay: 0.1s;
+  }
+
+  .scroll-reveal-delay-2 {
+    animation-delay: 0.2s;
+  }
+
+  .scroll-reveal-delay-3 {
+    animation-delay: 0.3s;
+  }
+}

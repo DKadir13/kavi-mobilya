@@ -5,7 +5,8 @@ import { useSearchParams } from 'next/navigation';
 import { productsApi, categoriesApi } from '@/lib/api';
 import { useCart } from '@/contexts/CartContext';
 import { Button } from '@/components/ui/button';
-import { ShoppingCart, Filter, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { ShoppingCart, Filter, ChevronLeft, ChevronRight, Search, ArrowUpDown } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { toast } from 'sonner';
@@ -16,6 +17,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from '@/components/ui/pagination';
+import { useDebounce } from '@/hooks/useDebounce';
 
 type Product = {
   _id: string;
@@ -41,13 +51,19 @@ type Category = {
 };
 
 export default function ProductsPage() {
-  const [products, setProducts] = useState<Product[]>([]);
+  const [allProducts, setAllProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [selectedStore, setSelectedStore] = useState<string>('all');
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [sortBy, setSortBy] = useState<string>('default');
+  const [currentPage, setCurrentPage] = useState<number>(1);
   const searchParams = useSearchParams();
   const { addToCart } = useCart();
+  const debouncedSearch = useDebounce(searchQuery, 300);
+  
+  const PRODUCTS_PER_PAGE = 20;
 
   const loadCategories = useCallback(async () => {
     try {
@@ -91,7 +107,8 @@ export default function ProductsPage() {
         id: product._id,
         categories: product.category_id !== null && typeof product.category_id === 'object' ? product.category_id : null,
       }));
-      setProducts(formatted);
+      setAllProducts(formatted);
+      setCurrentPage(1); // Reset to first page when filters change
     } catch (error: any) {
       console.error('Product load error:', error);
       const errorMessage = error?.message || error?.toString() || 'Bilinmeyen hata';
@@ -123,6 +140,42 @@ export default function ProductsPage() {
     loadProducts(category || 'all', store || 'all');
   }, [searchParams, loadProducts]);
 
+  // Filtered and sorted products
+  const filteredProducts = useMemo(() => {
+    let filtered = [...allProducts];
+
+    // Search filter
+    if (debouncedSearch) {
+      const searchLower = debouncedSearch.toLowerCase();
+      filtered = filtered.filter((product) =>
+        product.name.toLowerCase().includes(searchLower) ||
+        (product.description && product.description.toLowerCase().includes(searchLower))
+      );
+    }
+
+    // Sort products
+    if (sortBy === 'price-asc') {
+      filtered.sort((a, b) => (a.price || 0) - (b.price || 0));
+    } else if (sortBy === 'price-desc') {
+      filtered.sort((a, b) => (b.price || 0) - (a.price || 0));
+    } else if (sortBy === 'name-asc') {
+      filtered.sort((a, b) => a.name.localeCompare(b.name, 'tr'));
+    } else if (sortBy === 'name-desc') {
+      filtered.sort((a, b) => b.name.localeCompare(a.name, 'tr'));
+    }
+
+    return filtered;
+  }, [allProducts, debouncedSearch, sortBy]);
+
+  // Paginated products
+  const paginatedProducts = useMemo(() => {
+    const startIndex = (currentPage - 1) * PRODUCTS_PER_PAGE;
+    const endIndex = startIndex + PRODUCTS_PER_PAGE;
+    return filteredProducts.slice(startIndex, endIndex);
+  }, [filteredProducts, currentPage]);
+
+  const totalPages = Math.ceil(filteredProducts.length / PRODUCTS_PER_PAGE);
+
   const handleAddToCart = useCallback((product: Product) => {
     const categoryName = product.category_id !== null && typeof product.category_id === 'object' 
       ? product.category_id?.name 
@@ -150,46 +203,93 @@ export default function ProductsPage() {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="flex flex-col sm:flex-row gap-4 mb-8">
-          <div className="flex items-center gap-2 flex-1">
-            <Filter className="h-5 w-5 text-gray-500" />
+        <div className="flex flex-col gap-4 mb-8">
+          {/* Search Bar */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+            <Input
+              type="text"
+              placeholder="Ürün ara..."
+              value={searchQuery}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setCurrentPage(1);
+              }}
+              className="pl-10 w-full"
+            />
+          </div>
+
+          {/* Filters Row */}
+          <div className="flex flex-col sm:flex-row gap-4">
+            <div className="flex items-center gap-2 flex-1">
+              <Filter className="h-5 w-5 text-gray-500" />
+              <Select
+                value={selectedCategory}
+                onValueChange={(value) => {
+                  setSelectedCategory(value);
+                  loadProducts(value, selectedStore);
+                }}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Kategori Seçin" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Tüm Kategoriler</SelectItem>
+                  {categories.map((cat) => (
+                    <SelectItem key={cat.id} value={cat.slug}>
+                      {cat.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
             <Select
-              value={selectedCategory}
+              value={selectedStore}
               onValueChange={(value) => {
-                setSelectedCategory(value);
-                loadProducts(value, selectedStore);
+                setSelectedStore(value);
+                loadProducts(selectedCategory, value);
               }}
             >
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Kategori Seçin" />
+              <SelectTrigger className="w-full sm:w-48">
+                <SelectValue placeholder="Mağaza Seçin" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Tüm Kategoriler</SelectItem>
-                {categories.map((cat) => (
-                  <SelectItem key={cat.id} value={cat.slug}>
-                    {cat.name}
-                  </SelectItem>
-                ))}
+                <SelectItem value="all">Tüm Mağazalar</SelectItem>
+                <SelectItem value="home">Kavi Home</SelectItem>
+                <SelectItem value="premium">Kavi Premium</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <Select
+              value={sortBy}
+              onValueChange={(value) => {
+                setSortBy(value);
+                setCurrentPage(1);
+              }}
+            >
+              <SelectTrigger className="w-full sm:w-48">
+                <SelectValue placeholder="Sırala" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="default">Varsayılan</SelectItem>
+                <SelectItem value="price-asc">Fiyat: Düşükten Yükseğe</SelectItem>
+                <SelectItem value="price-desc">Fiyat: Yüksekten Düşüğe</SelectItem>
+                <SelectItem value="name-asc">İsim: A-Z</SelectItem>
+                <SelectItem value="name-desc">İsim: Z-A</SelectItem>
               </SelectContent>
             </Select>
           </div>
 
-          <Select
-            value={selectedStore}
-            onValueChange={(value) => {
-              setSelectedStore(value);
-              loadProducts(selectedCategory, value);
-            }}
-          >
-            <SelectTrigger className="w-full sm:w-48">
-              <SelectValue placeholder="Mağaza Seçin" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Tüm Mağazalar</SelectItem>
-              <SelectItem value="home">Kavi Home</SelectItem>
-              <SelectItem value="premium">Kavi Premium</SelectItem>
-            </SelectContent>
-          </Select>
+          {/* Results Count */}
+          <div className="text-sm text-gray-600">
+            {filteredProducts.length} ürün bulundu
+            {filteredProducts.length > PRODUCTS_PER_PAGE && (
+              <span className="ml-2">
+                (Sayfa {currentPage} / {totalPages})
+              </span>
+            )}
+          </div>
         </div>
 
         {loading ? (
@@ -197,7 +297,8 @@ export default function ProductsPage() {
             {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
               <div
                 key={i}
-                className="bg-white rounded-xl overflow-hidden shadow-md"
+                className="bg-white rounded-xl overflow-hidden shadow-md animate-fade-in"
+                style={{ animationDelay: `${i * 100}ms` }}
               >
                 <div className="h-64 bg-gray-200 animate-pulse" />
                 <div className="p-4 space-y-3">
@@ -208,19 +309,21 @@ export default function ProductsPage() {
               </div>
             ))}
           </div>
-        ) : products.length === 0 ? (
-          <div className="text-center py-16">
+        ) : filteredProducts.length === 0 ? (
+          <div className="text-center py-16 animate-fade-in">
             <p className="text-gray-500 text-lg">
-              Seçili filtrelere uygun ürün bulunamadı.
+              {searchQuery ? 'Arama kriterlerinize uygun ürün bulunamadı.' : 'Seçili filtrelere uygun ürün bulunamadı.'}
             </p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {products.map((product) => (
-              <div
-                key={product._id || product.id}
-                className="bg-white rounded-xl overflow-hidden shadow-md hover:shadow-xl transition-all group"
-              >
+          <>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {paginatedProducts.map((product, index) => (
+                <div
+                  key={product._id || product.id}
+                  className="bg-white rounded-xl overflow-hidden shadow-md hover:shadow-xl transition-all group animate-fade-in-up"
+                  style={{ animationDelay: `${index * 50}ms` }}
+                >
                 <Link href={`/urunler/${product._id || product.id}`}>
                   <ProductImageCarousel 
                     product={product}
@@ -250,10 +353,97 @@ export default function ProductsPage() {
                     <ShoppingCart className="h-4 w-4 mr-2" />
                     Sepete Ekle
                   </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="mt-12 flex flex-col items-center gap-4">
+                <Pagination>
+                  <PaginationContent>
+                    <PaginationItem>
+                      <button
+                        onClick={() => {
+                          if (currentPage > 1) {
+                            setCurrentPage(currentPage - 1);
+                            window.scrollTo({ top: 0, behavior: 'smooth' });
+                          }
+                        }}
+                        disabled={currentPage === 1}
+                        className={`flex items-center gap-1 px-4 py-2 rounded-md border transition-colors ${
+                          currentPage === 1
+                            ? 'opacity-50 cursor-not-allowed'
+                            : 'hover:bg-gray-100 cursor-pointer'
+                        }`}
+                      >
+                        <ChevronLeft className="h-4 w-4" />
+                        <span>Önceki</span>
+                      </button>
+                    </PaginationItem>
+                    
+                    {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
+                      if (
+                        page === 1 ||
+                        page === totalPages ||
+                        (page >= currentPage - 1 && page <= currentPage + 1)
+                      ) {
+                        return (
+                          <PaginationItem key={page}>
+                            <button
+                              onClick={() => {
+                                setCurrentPage(page);
+                                window.scrollTo({ top: 0, behavior: 'smooth' });
+                              }}
+                              className={`min-w-[40px] px-3 py-2 rounded-md border transition-colors ${
+                                currentPage === page
+                                  ? 'bg-[#a42a2a] text-white border-[#a42a2a]'
+                                  : 'hover:bg-gray-100'
+                              }`}
+                            >
+                              {page}
+                            </button>
+                          </PaginationItem>
+                        );
+                      } else if (page === currentPage - 2 || page === currentPage + 2) {
+                        return (
+                          <PaginationItem key={`ellipsis-${page}`}>
+                            <span className="px-2 py-2">...</span>
+                          </PaginationItem>
+                        );
+                      }
+                      return null;
+                    })}
+                    
+                    <PaginationItem>
+                      <button
+                        onClick={() => {
+                          if (currentPage < totalPages) {
+                            setCurrentPage(currentPage + 1);
+                            window.scrollTo({ top: 0, behavior: 'smooth' });
+                          }
+                        }}
+                        disabled={currentPage === totalPages}
+                        className={`flex items-center gap-1 px-4 py-2 rounded-md border transition-colors ${
+                          currentPage === totalPages
+                            ? 'opacity-50 cursor-not-allowed'
+                            : 'hover:bg-gray-100 cursor-pointer'
+                        }`}
+                      >
+                        <span>Sonraki</span>
+                        <ChevronRight className="h-4 w-4" />
+                      </button>
+                    </PaginationItem>
+                  </PaginationContent>
+                </Pagination>
+                
+                <div className="text-sm text-gray-600">
+                  Sayfa {currentPage} / {totalPages} - Toplam {filteredProducts.length} ürün
                 </div>
               </div>
-            ))}
-          </div>
+            )}
+          </>
         )}
       </div>
     </div>

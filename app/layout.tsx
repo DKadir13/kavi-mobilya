@@ -13,6 +13,10 @@ export const metadata: Metadata = {
   title: 'Kavi Mobilya - Kaliteli Mobilya 1995\'ten Beri',
   description:
     'Ankara\'da 1995 yılından beri kaliteli mobilya üretimi. Yatak odası, yemek odası, oturma grubu ve daha fazlası. Tüm Türkiye\'ye hizmet.',
+  icons: {
+    icon: '/logo.png',
+    apple: '/logo.png',
+  },
 };
 
 export default function RootLayout({

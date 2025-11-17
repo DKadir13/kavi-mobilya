@@ -1,8 +1,18 @@
+'use client';
+
 import Link from 'next/link';
 import { Phone, MapPin, Mail } from 'lucide-react';
 import Image from 'next/image';
+import { usePathname } from 'next/navigation';
 
 export default function Footer() {
+  const pathname = usePathname();
+
+  // Admin sayfalarında footer'ı gösterme
+  if (pathname?.startsWith('/admin')) {
+    return null;
+  }
+
   return (
     <footer className="bg-[#0a0a0a] text-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">

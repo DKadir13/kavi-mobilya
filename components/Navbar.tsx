@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Menu, ShoppingCart, X } from 'lucide-react';
+import { Menu, ShoppingCart, X, Phone, MapPin } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useCart } from '@/contexts/CartContext';
 import { Button } from '@/components/ui/button';
@@ -26,7 +26,7 @@ export default function Navbar() {
 
   useEffect(() => {
     const handleScroll = () => {
-      setScrolled(window.scrollY > 20);
+      setScrolled(window.scrollY > 30);
     };
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
@@ -39,17 +39,45 @@ export default function Navbar() {
     { href: '/iletisim', label: 'İletişim' },
   ];
 
+  // Admin sayfalarında navbar'ı gösterme
+  if (pathname?.startsWith('/admin')) {
+    return null;
+  }
+
   return (
     <>
+      {/* Üst Bilgi Çubuğu */}
+      <div className="fixed top-0 left-0 right-0 z-50 bg-[#0a0a0a] text-white text-xs sm:text-sm py-1.5 sm:py-2">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2 sm:space-x-4">
+              <a
+                href="tel:05537482279"
+                className="flex items-center space-x-1 sm:space-x-2 hover:text-[#a42a2a] transition-colors"
+              >
+                <Phone className="h-3 w-3 sm:h-4 sm:w-4" />
+                <span className="hidden sm:inline">0 (553) 748 22 79</span>
+                <span className="sm:hidden">0537 482 22 79</span>
+              </a>
+            </div>
+            <div className="flex items-center space-x-1 sm:space-x-2">
+              <MapPin className="h-3 w-3 sm:h-4 sm:w-4" />
+              <span className="hidden sm:inline">Ankara Etimesgut</span>
+              <span className="sm:hidden">Etimesgut</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <nav
-        className={`fixed top-0 left-0 right-0 z-40 transition-all duration-300 bg-white shadow-md ${
+        className={`fixed top-10 left-0 right-0 z-40 transition-all duration-300 bg-white shadow-md ${
           scrolled ? 'shadow-lg' : ''
         }`}
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-20">
             <Link href="/" className="flex items-center group">
-              <div className="relative w-28 h-28 transform group-hover:scale-110 transition-transform duration-300">
+              <div className="relative w-28 h-28 transform group-hover:scale-110 transition-transform duration-300 animate-navbar-logo-fade">
                 <Image
                   src={logoSrc}
                   alt="Kavi Mobilya Logo"

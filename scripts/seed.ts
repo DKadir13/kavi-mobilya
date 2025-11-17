@@ -32,8 +32,8 @@ async function seedDatabase() {
     });
     console.log(`Admin kullanıcı eklendi: ${adminUser1.email}`);
 
-    // İkinci admin kullanıcı: ibo123 / 1453ibo
-    const hashedPassword2 = await bcrypt.hash('1453ibo', 10);
+    // İkinci admin kullanıcı: ibo123 / 1453ibo.
+    const hashedPassword2 = await bcrypt.hash('1453ibo.', 10);
     const adminUser2 = await AdminUser.create({
       email: 'ibo123',
       password: hashedPassword2,
@@ -52,7 +52,7 @@ async function seedDatabase() {
     console.log('  Şifre: 1170nyc.');
     console.log('\nKullanıcı 2:');
     console.log('  Email: ibo123');
-    console.log('  Şifre: 1453ibo');
+    console.log('  Şifre: 1453ibo.');
 
     process.exit(0);
   } catch (error) {

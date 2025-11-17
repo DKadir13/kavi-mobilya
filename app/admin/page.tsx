@@ -8,11 +8,14 @@ import { Label } from '@/components/ui/label';
 import { AlertCircle } from 'lucide-react';
 
 // STATİK ADMIN BİLGİLERİ - Veritabanı kurulduktan sonra bu kısmı kaldırabilirsiniz
-const STATIC_ADMIN_EMAIL = 'admin@kavimobilya.com';
-const STATIC_ADMIN_PASSWORD = 'KaviMobilya2024!';
+// Bu bilgiler MongoDB'deki admin kullanıcıları ile aynı olmalı
+const STATIC_ADMINS = [
+  { username: 'nyc0606', password: '1170nyc.' },
+  { username: 'ibo123', password: '1453ibo.' },
+];
 
 export default function AdminLoginPage() {
-  const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -25,13 +28,18 @@ export default function AdminLoginPage() {
 
     try {
       // Önce statik admin kontrolü yap
-      if (email === STATIC_ADMIN_EMAIL && password === STATIC_ADMIN_PASSWORD) {
+      const staticAdmin = STATIC_ADMINS.find(
+        (admin) => admin.username === username && admin.password === password
+      );
+      
+      if (staticAdmin) {
         // LocalStorage'a admin bilgisini kaydet
         localStorage.setItem('admin_auth', 'true');
-        localStorage.setItem('admin_email', email);
+        localStorage.setItem('admin_username', username);
         localStorage.setItem('admin_user', JSON.stringify({
           id: 'static-admin-id',
-          email: email,
+          username: username,
+          email: username,
           role: 'admin'
         }));
         
@@ -46,8 +54,8 @@ export default function AdminLoginPage() {
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({ email, password }),
-      });
+          body: JSON.stringify({ username, password }),
+        });
 
         if (!response.ok) {
           const error = await response.json();
@@ -57,6 +65,7 @@ export default function AdminLoginPage() {
         const { user, token } = await response.json();
         
         localStorage.setItem('admin_auth', 'true');
+        localStorage.setItem('admin_username', user.username || user.email);
         localStorage.setItem('admin_email', user.email);
         localStorage.setItem('admin_user', JSON.stringify(user));
         localStorage.setItem('admin_token', token);
@@ -95,15 +104,16 @@ export default function AdminLoginPage() {
 
           <form onSubmit={handleLogin} className="space-y-6">
             <div className="space-y-2">
-              <Label htmlFor="email">E-posta</Label>
+              <Label htmlFor="username">Kullanıcı Adı</Label>
               <Input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="admin@kavimobilya.com"
+                id="username"
+                type="text"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                placeholder="Kullanıcı adınızı girin"
                 required
                 disabled={loading}
+                autoComplete="username"
               />
             </div>
 
@@ -117,6 +127,7 @@ export default function AdminLoginPage() {
                 placeholder="••••••••"
                 required
                 disabled={loading}
+                autoComplete="current-password"
               />
             </div>
 

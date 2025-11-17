@@ -3,9 +3,18 @@
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { ArrowRight, Store, Award, Truck, Phone } from 'lucide-react';
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState } from 'react';
 import { productsApi } from '@/lib/api';
 import Image from 'next/image';
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  CarouselNext,
+  CarouselPrevious,
+  type CarouselApi,
+} from '@/components/ui/carousel';
+import Autoplay from 'embla-carousel-autoplay';
 
 type Product = {
   _id: string;
@@ -17,10 +26,32 @@ type Product = {
 
 export default function Home() {
   const [featuredProducts, setFeaturedProducts] = useState<Product[]>([]);
+  const [api, setApi] = useState<CarouselApi>();
+  const [current, setCurrent] = useState(0);
+  const [showIntro, setShowIntro] = useState(true);
 
   useEffect(() => {
     loadFeaturedProducts();
+    
+    // Intro overlay - 3 saniye sonra gradyanlı geçişle kaybolsun
+    const hideTimer = setTimeout(() => {
+      setShowIntro(false);
+    }, 3000);
+
+    return () => clearTimeout(hideTimer);
   }, []);
+
+  useEffect(() => {
+    if (!api) {
+      return;
+    }
+
+    setCurrent(api.selectedScrollSnap());
+
+    api.on('select', () => {
+      setCurrent(api.selectedScrollSnap());
+    });
+  }, [api]);
 
   const loadFeaturedProducts = async () => {
     try {
@@ -36,50 +67,168 @@ export default function Home() {
   };
 
   return (
-    <div className="pt-20">
-      <section className="relative h-[600px] flex items-center justify-center overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-[#0a0a0a] via-[#1a1a1a] to-[#a42a2a]" />
-        <div className="absolute inset-0 bg-[url('https://images.pexels.com/photos/1350789/pexels-photo-1350789.jpeg?auto=compress&cs=tinysrgb&w=1920')] bg-cover bg-center opacity-20" />
-
-        <div className="relative z-10 max-w-4xl mx-auto px-4 text-center">
-          <h1 className="text-5xl md:text-6xl font-bold text-white mb-6">
-            KAVİ MOBİLYA
-          </h1>
-          <p className="text-xl md:text-2xl text-gray-200 mb-8">
-            1995'ten Beri Kaliteli Mobilya Üretimi
-          </p>
-          <p className="text-lg text-gray-300 mb-8 max-w-2xl mx-auto">
-            Ankara Ulus'ta kurulup bugün Etimesgut'ta iki mağazamızla hizmet
-            veriyoruz. Tüm Türkiye'ye kaliteli mobilya çözümleri sunuyoruz.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link href="/urunler">
-              <Button
-                size="lg"
-                className="bg-[#a42a2a] hover:bg-[#8a2222] text-white"
-              >
-                Ürünlerimizi İnceleyin
-                <ArrowRight className="ml-2 h-5 w-5" />
-              </Button>
-            </Link>
-            <Link href="/iletisim">
-              <Button
-                size="lg"
-                variant="outline"
-                className="!border-white !text-white hover:bg-white hover:!text-[#0a0a0a] transition-colors bg-transparent"
-              >
-                İletişime Geçin
-              </Button>
-            </Link>
+    <div className="pt-32 relative">
+      {/* Intro Overlay - Logo ve Yazı */}
+      {showIntro && (
+        <div className="fixed inset-0 z-[100] bg-gradient-to-br from-[#0a0a0a] via-[#1a1a1a] to-[#0a0a0a] flex flex-col items-center justify-center overflow-hidden transition-opacity duration-2000 ease-out">
+          <div className="flex flex-col items-center justify-center space-y-8">
+            {/* Logo */}
+            <div className="relative w-48 h-48 sm:w-64 sm:h-64 animate-logo-fade-in">
+              <Image
+                src="/logo.png"
+                alt="Kavi Mobilya Logo"
+                fill
+                className="object-contain"
+                priority
+                sizes="256px"
+                style={{
+                  filter: 'brightness(0) saturate(100%) invert(15%) sepia(95%) saturate(5000%) hue-rotate(350deg) brightness(0.9) contrast(1.2)',
+                }}
+              />
+            </div>
+            
+            {/* Alt Yazı */}
+            <div className="animate-text-slide-up">
+              <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-white text-center">
+                Evinize Değer Katar
+              </h2>
+            </div>
           </div>
         </div>
+      )}
+
+      {/* Ana Sayfa İçeriği - Gradyanlı Geçiş */}
+      <div className={`transition-opacity duration-2500 ease-out ${
+        showIntro ? 'opacity-0' : 'opacity-100'
+      }`}>
+        {/* Gradient Background Overlay */}
+        <div className="fixed inset-0 bg-gradient-to-br from-[#0a0a0a] via-[#1a1a1a] to-[#a42a2a] opacity-30 pointer-events-none z-0" />
+
+        {/* Hero Carousel Section */}
+      <section className="relative h-[600px] overflow-hidden">
+        <Carousel
+          className="w-full h-full"
+          setApi={setApi}
+          opts={{
+            align: 'start',
+            loop: true,
+          }}
+          plugins={[
+            Autoplay({
+              delay: 5000,
+              stopOnInteraction: false,
+            }),
+          ]}
+        >
+          <CarouselContent className="h-[600px]">
+            <CarouselItem className="h-full">
+              <div className="relative h-full w-full">
+                <div className="absolute inset-0 bg-gradient-to-br from-[#0a0a0a] via-[#1a1a1a] to-[#a42a2a]" />
+                <Image
+                  src="https://images.pexels.com/photos/1350789/pexels-photo-1350789.jpeg?auto=compress&cs=tinysrgb&w=1920"
+                  alt="Kavi Mobilya"
+                  fill
+                  className="object-cover opacity-30"
+                  priority
+                  sizes="100vw"
+                />
+                <div className="relative z-10 h-full flex items-center justify-center">
+                  <div className="max-w-4xl mx-auto px-4 text-center">
+                    <h1 className="text-5xl md:text-6xl font-bold text-white mb-6 animate-fade-in">
+                      KAVİ MOBİLYA
+                    </h1>
+                    <p className="text-xl md:text-2xl text-gray-200 mb-8 animate-fade-in-delay">
+                      1995'ten Beri Kaliteli Mobilya Üretimi
+                    </p>
+                    <p className="text-lg text-gray-300 mb-8 max-w-2xl mx-auto animate-fade-in-delay-2">
+                      Ankara Ulus'ta kurulup bugün Etimesgut'ta iki mağazamızla hizmet
+                      veriyoruz. Tüm Türkiye'ye kaliteli mobilya çözümleri sunuyoruz.
+                    </p>
+                    <div className="flex flex-col sm:flex-row gap-4 justify-center animate-fade-in-delay-3">
+                      <Link href="/urunler">
+                        <Button
+                          size="lg"
+                          className="bg-[#a42a2a] hover:bg-[#8a2222] text-white"
+                        >
+                          Ürünlerimizi İnceleyin
+                          <ArrowRight className="ml-2 h-5 w-5" />
+                        </Button>
+                      </Link>
+                      <Link href="/iletisim">
+                        <Button
+                          size="lg"
+                          variant="outline"
+                          className="!border-white !text-white hover:bg-white hover:!text-[#0a0a0a] transition-colors bg-transparent"
+                        >
+                          İletişime Geçin
+                        </Button>
+                      </Link>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </CarouselItem>
+            <CarouselItem className="h-full">
+              <div className="relative h-full w-full">
+                <div className="absolute inset-0 bg-gradient-to-br from-[#a42a2a] via-[#1a1a1a] to-[#0a0a0a]" />
+                <Image
+                  src="https://images.pexels.com/photos/1743229/pexels-photo-1743229.jpeg?auto=compress&cs=tinysrgb&w=1920"
+                  alt="Kavi Mobilya Premium"
+                  fill
+                  className="object-cover opacity-30"
+                  sizes="100vw"
+                />
+                <div className="relative z-10 h-full flex items-center justify-center">
+                  <div className="max-w-4xl mx-auto px-4 text-center">
+                    <h1 className="text-5xl md:text-6xl font-bold text-white mb-6">
+                      KALİTE VE GÜVEN
+                    </h1>
+                    <p className="text-xl md:text-2xl text-gray-200 mb-8">
+                      Yılların Deneyimi ile Hizmetinizdeyiz
+                    </p>
+                    <p className="text-lg text-gray-300 mb-8 max-w-2xl mx-auto">
+                      Her bütçeye uygun mobilya çözümleri sunuyoruz. Eviniz için en iyisini seçin.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </CarouselItem>
+            <CarouselItem className="h-full">
+              <div className="relative h-full w-full">
+                <div className="absolute inset-0 bg-gradient-to-br from-[#1a1a1a] via-[#a42a2a] to-[#0a0a0a]" />
+                <Image
+                  src="https://images.pexels.com/photos/1571460/pexels-photo-1571460.jpeg?auto=compress&cs=tinysrgb&w=1920"
+                  alt="Kavi Mobilya Koleksiyon"
+                  fill
+                  className="object-cover opacity-30"
+                  sizes="100vw"
+                />
+                <div className="relative z-10 h-full flex items-center justify-center">
+                  <div className="max-w-4xl mx-auto px-4 text-center">
+                    <h1 className="text-5xl md:text-6xl font-bold text-white mb-6">
+                      MODERN TASARIMLAR
+                    </h1>
+                    <p className="text-xl md:text-2xl text-gray-200 mb-8">
+                      Evinize Uygun Mobilya Çözümleri
+                    </p>
+                    <p className="text-lg text-gray-300 mb-8 max-w-2xl mx-auto">
+                      Geniş ürün yelpazemizle hayalinizdeki evi oluşturun.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </CarouselItem>
+          </CarouselContent>
+          <CarouselPrevious className="left-4 bg-white/80 hover:bg-white text-gray-900" />
+          <CarouselNext className="right-4 bg-white/80 hover:bg-white text-gray-900" />
+        </Carousel>
       </section>
 
       <section className="py-16 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             <Link href="/urunler?magaza=home">
-              <div className="group relative h-80 rounded-2xl overflow-hidden shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-105">
+              <div className="group relative h-80 rounded-2xl overflow-hidden shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-105 scroll-reveal">
                 <div className="absolute inset-0 bg-gradient-to-br from-gray-800 to-gray-900" />
                 <div className="absolute inset-0 bg-[url('https://images.pexels.com/photos/1350789/pexels-photo-1350789.jpeg?auto=compress&cs=tinysrgb&w=800')] bg-cover bg-center opacity-40 group-hover:opacity-50 transition-opacity" />
                 <div className="relative h-full flex flex-col items-center justify-center text-white p-8">
@@ -99,7 +248,7 @@ export default function Home() {
             </Link>
 
             <Link href="/urunler?magaza=premium">
-              <div className="group relative h-80 rounded-2xl overflow-hidden shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-105">
+              <div className="group relative h-80 rounded-2xl overflow-hidden shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-105 scroll-reveal scroll-reveal-delay-1">
                 <div className="absolute inset-0 bg-gradient-to-br from-[#a42a2a] to-[#7a1a1a]" />
                 <div className="absolute inset-0 bg-[url('https://images.pexels.com/photos/1743229/pexels-photo-1743229.jpeg?auto=compress&cs=tinysrgb&w=800')] bg-cover bg-center opacity-30 group-hover:opacity-40 transition-opacity" />
                 <div className="relative h-full flex flex-col items-center justify-center text-white p-8">
@@ -123,7 +272,7 @@ export default function Home() {
 
         <section className="py-16 bg-gray-50">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="text-center mb-12">
+            <div className="text-center mb-12 scroll-reveal">
               <h2 className="text-3xl font-bold text-[#0a0a0a] mb-4">
                 Öne Çıkan Ürünler
               </h2>
@@ -134,11 +283,13 @@ export default function Home() {
 
           {featuredProducts.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {featuredProducts.map((product) => (
+              {featuredProducts.map((product, index) => (
                 <Link
                   key={product._id}
                   href={`/urunler/${product._id}`}
-                  className="group bg-white rounded-xl overflow-hidden shadow-md hover:shadow-xl transition-all"
+                  className={`group bg-white rounded-xl overflow-hidden shadow-md hover:shadow-xl transition-all scroll-reveal ${
+                    index === 0 ? '' : index === 1 ? 'scroll-reveal-delay-1' : 'scroll-reveal-delay-2'
+                  }`}
                 >
                   <div className="relative h-64 bg-gray-100">
                     {product.image_url ? (
@@ -187,7 +338,7 @@ export default function Home() {
       <section className="py-16 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div className="text-center">
+            <div className="text-center scroll-reveal">
               <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-[#a42a2a] text-white mb-4">
                 <Award className="h-8 w-8" />
               </div>
@@ -198,7 +349,7 @@ export default function Home() {
               </p>
             </div>
 
-            <div className="text-center">
+            <div className="text-center scroll-reveal scroll-reveal-delay-1">
               <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-[#a42a2a] text-white mb-4">
                 <Truck className="h-8 w-8" />
               </div>
@@ -210,7 +361,7 @@ export default function Home() {
               </p>
             </div>
 
-            <div className="text-center">
+            <div className="text-center scroll-reveal scroll-reveal-delay-2">
               <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-[#a42a2a] text-white mb-4">
                 <Phone className="h-8 w-8" />
               </div>
@@ -222,6 +373,7 @@ export default function Home() {
           </div>
         </div>
       </section>
+      </div>
     </div>
   );
 }
