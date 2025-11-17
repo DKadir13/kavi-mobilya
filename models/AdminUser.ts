@@ -11,7 +11,7 @@ export interface IAdminUser {
   updated_at?: Date;
 }
 
-const AdminUserSchema = new Schema<IAdminUser>(
+const AdminUserSchema = new Schema(
   {
     email: { type: String, required: true, unique: true },
     password: { type: String, required: true },

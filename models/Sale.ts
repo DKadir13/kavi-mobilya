@@ -12,7 +12,7 @@ export interface ISale {
   created_at?: Date;
 }
 
-const SaleSchema = new Schema<ISale>(
+const SaleSchema = new Schema(
   {
     product_id: { type: String, ref: 'Product' },
     quantity: { type: Number, required: true, default: 1 },

@@ -17,7 +17,7 @@ export interface IProduct {
   updated_at?: Date;
 }
 
-const ProductSchema = new Schema<IProduct>(
+const ProductSchema = new Schema(
   {
     category_id: { type: String, ref: 'Category' },
     name: { type: String, required: true },

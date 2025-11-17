@@ -11,7 +11,7 @@ export interface ICategory {
   updated_at?: Date;
 }
 
-const CategorySchema = new Schema<ICategory>(
+const CategorySchema = new Schema(
   {
     name: { type: String, required: true },
     slug: { type: String, required: true },
