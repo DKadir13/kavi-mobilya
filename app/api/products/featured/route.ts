@@ -13,13 +13,13 @@ export async function GET() {
       .lean();
     
     // Get all unique category IDs
-    const categoryIds = [
-      ...new Set(
+    const categoryIds = Array.from(
+      new Set(
         products
           .map((p) => p.category_id)
           .filter((id): id is string => !!id)
-      ),
-    ];
+      )
+    );
 
     // Fetch all categories in one query (only needed fields)
     const categories = await Category.find({
