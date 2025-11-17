@@ -1,4 +1,4 @@
-import mongoose, { Schema, Model } from 'mongoose';
+import mongoose, { Schema } from 'mongoose';
 
 export interface IProduct {
   _id?: string;
@@ -48,8 +48,8 @@ ProductSchema.index({ store_type: 1 });
 ProductSchema.index({ is_active: 1 });
 ProductSchema.index({ is_featured: 1, featured_order: 1 });
 
-const Product: Model<IProduct> =
-  mongoose.models.Product || mongoose.model<IProduct>('Product', ProductSchema);
+const Product: any =
+  mongoose.models.Product || mongoose.model('Product', ProductSchema);
 
 export default Product;
 

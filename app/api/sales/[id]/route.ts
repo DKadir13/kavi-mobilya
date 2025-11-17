@@ -9,14 +9,14 @@ export async function GET(
 ) {
   try {
     await connectDB();
-    const sale = await Sale.findById(params.id).lean();
+    const sale: any = await Sale.findById(params.id).lean();
     if (!sale) {
       return NextResponse.json({ error: 'Satış bulunamadı' }, { status: 404 });
     }
     
     const saleObj: any = { ...sale };
     if (sale.product_id) {
-      const product = await Product.findById(sale.product_id).lean();
+      const product: any = await Product.findById(sale.product_id).lean();
       if (product) {
         saleObj.product_id = {
           _id: product._id,
@@ -39,7 +39,7 @@ export async function PUT(
   try {
     await connectDB();
     const body = await request.json();
-    const sale = await Sale.findByIdAndUpdate(params.id, body, {
+    const sale: any = await Sale.findByIdAndUpdate(params.id, body, {
       new: true,
       runValidators: true,
     }).lean();
@@ -49,7 +49,7 @@ export async function PUT(
     
     const saleObj: any = { ...sale };
     if (sale.product_id) {
-      const product = await Product.findById(sale.product_id).lean();
+      const product: any = await Product.findById(sale.product_id).lean();
       if (product) {
         saleObj.product_id = {
           _id: product._id,

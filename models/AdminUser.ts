@@ -1,4 +1,4 @@
-import mongoose, { Schema, Model } from 'mongoose';
+import mongoose, { Schema } from 'mongoose';
 import bcrypt from 'bcryptjs';
 
 export interface IAdminUser {
@@ -37,8 +37,8 @@ AdminUserSchema.methods.comparePassword = async function (candidatePassword: str
   return bcrypt.compare(candidatePassword, this.password);
 };
 
-const AdminUser: Model<IAdminUser> =
-  mongoose.models.AdminUser || mongoose.model<IAdminUser>('AdminUser', AdminUserSchema);
+const AdminUser: any =
+  mongoose.models.AdminUser || mongoose.model('AdminUser', AdminUserSchema);
 
 export default AdminUser;
 

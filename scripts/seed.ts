@@ -69,10 +69,10 @@ async function seedDatabase() {
     console.log('Ürünler ekleniyor...');
     await Product.deleteMany({});
 
-    const yatakOdasi = categories.find((c) => c.slug === 'yatak-odasi');
-    const yemekOdasi = categories.find((c) => c.slug === 'yemek-odasi');
-    const oturmaGrubu = categories.find((c) => c.slug === 'oturma-grubu');
-    const tvUnitesi = categories.find((c) => c.slug === 'tv-unitesi');
+    const yatakOdasi = categories.find((c: any) => c.slug === 'yatak-odasi');
+    const yemekOdasi = categories.find((c: any) => c.slug === 'yemek-odasi');
+    const oturmaGrubu = categories.find((c: any) => c.slug === 'oturma-grubu');
+    const tvUnitesi = categories.find((c: any) => c.slug === 'tv-unitesi');
 
     const products = await Product.insertMany([
       // Kavi Home Ürünleri
@@ -129,7 +129,7 @@ async function seedDatabase() {
         price: 9800,
         image_url: 'https://images.pexels.com/photos/1648771/pexels-photo-1648771.jpeg?auto=compress&cs=tinysrgb&w=800',
         store_type: 'home',
-        category_id: categories.find((c) => c.slug === 'genc-odasi')?._id.toString(),
+        category_id: categories.find((c: any) => c.slug === 'genc-odasi')?._id.toString(),
         is_featured: false,
         is_active: true,
         stock_status: 'in_stock',
@@ -140,7 +140,7 @@ async function seedDatabase() {
         price: 7500,
         image_url: 'https://images.pexels.com/photos/1337371/pexels-photo-1337371.jpeg?auto=compress&cs=tinysrgb&w=800',
         store_type: 'home',
-        category_id: categories.find((c) => c.slug === 'cocuk-odasi')?._id.toString(),
+        category_id: categories.find((c: any) => c.slug === 'cocuk-odasi')?._id.toString(),
         is_featured: false,
         is_active: true,
         stock_status: 'in_stock',
@@ -199,7 +199,7 @@ async function seedDatabase() {
         price: 8500,
         image_url: 'https://images.pexels.com/photos/1743229/pexels-photo-1743229.jpeg?auto=compress&cs=tinysrgb&w=800',
         store_type: 'premium',
-        category_id: categories.find((c) => c.slug === 'calisma-masasi')?._id.toString(),
+        category_id: categories.find((c: any) => c.slug === 'calisma-masasi')?._id.toString(),
         is_featured: false,
         is_active: true,
         stock_status: 'in_stock',
@@ -210,7 +210,7 @@ async function seedDatabase() {
         price: 18500,
         image_url: 'https://images.pexels.com/photos/271816/pexels-photo-271816.jpeg?auto=compress&cs=tinysrgb&w=800',
         store_type: 'home',
-        category_id: categories.find((c) => c.slug === 'mutfak')?._id.toString(),
+        category_id: categories.find((c: any) => c.slug === 'mutfak')?._id.toString(),
         is_featured: false,
         is_active: true,
         stock_status: 'in_stock',

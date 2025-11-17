@@ -1,4 +1,4 @@
-import mongoose, { Schema, Model } from 'mongoose';
+import mongoose, { Schema } from 'mongoose';
 
 export interface ICategory {
   _id?: string;
@@ -30,8 +30,8 @@ const CategorySchema = new Schema(
 CategorySchema.index({ slug: 1 }, { unique: true });
 CategorySchema.index({ order_index: 1 });
 
-const Category: Model<ICategory> =
-  mongoose.models.Category || mongoose.model<ICategory>('Category', CategorySchema);
+const Category: any =
+  mongoose.models.Category || mongoose.model('Category', CategorySchema);
 
 export default Category;
 

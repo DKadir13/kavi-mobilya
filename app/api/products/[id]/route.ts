@@ -9,7 +9,7 @@ export async function GET(
 ) {
   try {
     await connectDB();
-    const product = await Product.findById(params.id)
+    const product: any = await Product.findById(params.id)
       .select('name description price image_url images store_type category_id is_featured is_active featured_order created_at')
       .lean();
     if (!product) {
@@ -18,7 +18,7 @@ export async function GET(
     
     const productObj: any = { ...product };
     if (product.category_id) {
-      const category = await Category.findById(product.category_id)
+      const category: any = await Category.findById(product.category_id)
         .select('name slug')
         .lean();
       if (category) {
@@ -48,7 +48,7 @@ export async function PUT(
   try {
     await connectDB();
     const body = await request.json();
-    const product = await Product.findByIdAndUpdate(params.id, body, {
+    const product: any = await Product.findByIdAndUpdate(params.id, body, {
       new: true,
       runValidators: true,
     }).lean();
@@ -58,7 +58,7 @@ export async function PUT(
     
     const productObj: any = { ...product };
     if (product.category_id) {
-      const category = await Category.findById(product.category_id).lean();
+      const category: any = await Category.findById(product.category_id).lean();
       if (category) {
         productObj.category_id = {
           _id: category._id,

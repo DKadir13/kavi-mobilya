@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
     if (is_active === 'false') query.is_active = false;
 
     // Only select necessary fields for better performance
-    const products = await Product.find(query)
+    const products: any[] = await Product.find(query)
       .select('name description price image_url images store_type category_id is_featured is_active featured_order created_at')
       .sort({ created_at: -1 })
       .lean();
@@ -30,13 +30,13 @@ export async function GET(request: NextRequest) {
     const categoryIds = Array.from(
       new Set(
         products
-          .map((p) => p.category_id)
+          .map((p: any) => p.category_id)
           .filter((id): id is string => !!id)
       )
     );
 
     // Fetch all categories in one query (only needed fields)
-    const categories = await Category.find({
+    const categories: any[] = await Category.find({
       _id: { $in: categoryIds },
     })
       .select('_id name slug')
@@ -48,10 +48,10 @@ export async function GET(request: NextRequest) {
     );
 
     // Populate category efficiently
-    const productsWithCategories = products.map((product) => {
+    const productsWithCategories = products.map((product: any) => {
       const productObj: any = { ...product };
       if (product.category_id) {
-        const category = categoryMap.get(product.category_id.toString());
+        const category: any = categoryMap.get(product.category_id.toString());
         if (category) {
           productObj.category_id = {
             _id: category._id,

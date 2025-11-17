@@ -18,32 +18,32 @@ export async function GET(request: NextRequest) {
       query.sale_date = { $gte: startDate, $lt: endDate };
     }
 
-    const sales = await Sale.find(query).sort({ created_at: -1 }).lean();
+    const sales: any[] = await Sale.find(query).sort({ created_at: -1 }).lean();
     
     // Get all unique product IDs
     const productIds = Array.from(
       new Set(
         sales
-          .map((s) => s.product_id)
+          .map((s: any) => s.product_id)
           .filter((id): id is string => !!id)
       )
     );
 
     // Fetch all products in one query
-    const products = await Product.find({
+    const products: any[] = await Product.find({
       _id: { $in: productIds },
     }).lean();
 
     // Create product map for O(1) lookup
     const productMap = new Map(
-      products.map((prod) => [prod._id.toString(), prod])
+      products.map((prod: any) => [prod._id.toString(), prod])
     );
 
     // Populate product efficiently
-    const salesWithProducts = sales.map((sale) => {
+    const salesWithProducts = sales.map((sale: any) => {
       const saleObj: any = { ...sale };
       if (sale.product_id) {
-        const product = productMap.get(sale.product_id.toString());
+        const product: any = productMap.get(sale.product_id.toString());
         if (product) {
           saleObj.product_id = {
             _id: product._id,

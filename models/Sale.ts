@@ -1,4 +1,4 @@
-import mongoose, { Schema, Model } from 'mongoose';
+import mongoose, { Schema } from 'mongoose';
 
 export interface ISale {
   _id?: string;
@@ -32,8 +32,8 @@ const SaleSchema = new Schema(
 SaleSchema.index({ product_id: 1 });
 SaleSchema.index({ sale_date: 1 });
 
-const Sale: Model<ISale> =
-  mongoose.models.Sale || mongoose.model<ISale>('Sale', SaleSchema);
+const Sale: any =
+  mongoose.models.Sale || mongoose.model('Sale', SaleSchema);
 
 export default Sale;
 
