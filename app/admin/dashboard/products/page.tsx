@@ -158,7 +158,7 @@ export default function ProductsManagementPage() {
 
   const handleEdit = useCallback((product: Product) => {
     const categoryId =
-      typeof product.category_id === 'object'
+      product.category_id !== null && typeof product.category_id === 'object'
         ? product.category_id._id
         : product.category_id || 'none';
 
@@ -594,7 +594,7 @@ export default function ProductsManagementPage() {
               <tbody className="divide-y">
                 {filteredProducts.map((product) => {
                   const categoryName =
-                    typeof product.category_id === 'object'
+                    product.category_id !== null && typeof product.category_id === 'object'
                       ? product.category_id.name
                       : null;
                   const productId = product._id || product.id || '';
