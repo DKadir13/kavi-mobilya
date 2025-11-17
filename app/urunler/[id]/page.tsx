@@ -1,11 +1,11 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { productsApi } from '@/lib/api';
 import { useCart } from '@/contexts/CartContext';
 import { Button } from '@/components/ui/button';
-import { ShoppingCart, ArrowLeft, MessageCircle } from 'lucide-react';
+import { ShoppingCart, ArrowLeft, MessageCircle, ChevronLeft, ChevronRight } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 
@@ -16,6 +16,7 @@ type Product = {
   description: string | null;
   price: number | null;
   image_url: string | null;
+  images?: string[];
   store_type: 'home' | 'premium';
   category_id: string | {
     _id: string;
@@ -121,21 +122,7 @@ export default function ProductDetailPage() {
         </Link>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
-          <div className="relative aspect-square bg-white rounded-2xl shadow-lg overflow-hidden">
-            {product.image_url ? (
-              <Image
-                src={product.image_url}
-                alt={product.name}
-                fill
-                className="object-cover"
-                priority
-              />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center text-gray-400">
-                <span className="text-xl">Resim yok</span>
-              </div>
-            )}
-          </div>
+          <ProductImageCarousel product={product} />
 
           <div className="space-y-6">
             <div>
@@ -241,6 +228,167 @@ export default function ProductDetailPage() {
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+// Product Image Carousel Component for Detail Page
+function ProductImageCarousel({ product }: { product: Product }) {
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  
+  // Tüm resimleri birleştir (image_url + images array)
+  const images = useMemo(() => {
+    const imageList: string[] = [];
+    if (product.image_url) {
+      imageList.push(product.image_url);
+    }
+    if (product.images && Array.isArray(product.images)) {
+      product.images.forEach(img => {
+        if (img && !imageList.includes(img)) {
+          imageList.push(img);
+        }
+      });
+    }
+    return imageList;
+  }, [product.image_url, product.images]);
+
+  const hasMultipleImages = images.length > 1;
+
+  // Otomatik geçiş efekti
+  useEffect(() => {
+    if (hasMultipleImages) {
+      intervalRef.current = setInterval(() => {
+        setCurrentImageIndex((prev) => (prev + 1) % images.length);
+      }, 5000); // 5 saniye
+
+      return () => {
+        if (intervalRef.current) {
+          clearInterval(intervalRef.current);
+        }
+      };
+    }
+  }, [hasMultipleImages, images.length]);
+
+  // Mouse hover'da durdur
+  const handleMouseEnter = () => {
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+    }
+  };
+
+  const handleMouseLeave = () => {
+    if (hasMultipleImages) {
+      intervalRef.current = setInterval(() => {
+        setCurrentImageIndex((prev) => (prev + 1) % images.length);
+      }, 5000);
+    }
+  };
+
+  const goToPrevious = (e?: React.MouseEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    setCurrentImageIndex((prev) => (prev - 1 + images.length) % images.length);
+  };
+
+  const goToNext = (e?: React.MouseEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    setCurrentImageIndex((prev) => (prev + 1) % images.length);
+  };
+
+  const goToImage = (index: number) => {
+    setCurrentImageIndex(index);
+  };
+
+  return (
+    <div 
+      className="relative aspect-square bg-white rounded-2xl shadow-lg overflow-hidden group"
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
+    >
+      {images.length > 0 ? (
+        <>
+          <Image
+            src={images[currentImageIndex]}
+            alt={`${product.name} - Resim ${currentImageIndex + 1}`}
+            fill
+            className="object-cover"
+            priority={currentImageIndex === 0}
+            sizes="(max-width: 1024px) 100vw, 50vw"
+          />
+          
+          {/* Navigation Buttons */}
+          {hasMultipleImages && (
+            <>
+              <button
+                onClick={goToPrevious}
+                className="absolute left-4 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-3 rounded-full opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                aria-label="Önceki resim"
+              >
+                <ChevronLeft className="h-6 w-6" />
+              </button>
+              <button
+                onClick={goToNext}
+                className="absolute right-4 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-3 rounded-full opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                aria-label="Sonraki resim"
+              >
+                <ChevronRight className="h-6 w-6" />
+              </button>
+
+              {/* Dots Indicator */}
+              <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 z-10">
+                {images.map((_, index) => (
+                  <button
+                    key={index}
+                    onClick={() => goToImage(index)}
+                    className={`h-2 rounded-full transition-all ${
+                      index === currentImageIndex
+                        ? 'bg-white w-8'
+                        : 'bg-white/50 hover:bg-white/75 w-2'
+                    }`}
+                    aria-label={`Resim ${index + 1}`}
+                  />
+                ))}
+              </div>
+
+              {/* Thumbnail Navigation (Optional - sadece çok fazla resim varsa) */}
+              {images.length <= 5 && (
+                <div className="absolute top-4 left-1/2 -translate-x-1/2 flex gap-2 z-10">
+                  {images.map((img, index) => (
+                    <button
+                      key={index}
+                      onClick={() => goToImage(index)}
+                      className={`relative w-16 h-16 rounded-lg overflow-hidden border-2 transition-all ${
+                        index === currentImageIndex
+                          ? 'border-white scale-110'
+                          : 'border-white/50 hover:border-white/75'
+                      }`}
+                      aria-label={`Resim ${index + 1}`}
+                    >
+                      <Image
+                        src={img}
+                        alt={`Thumbnail ${index + 1}`}
+                        fill
+                        className="object-cover"
+                        sizes="64px"
+                      />
+                    </button>
+                  ))}
+                </div>
+              )}
+            </>
+          )}
+        </>
+      ) : (
+        <div className="w-full h-full flex items-center justify-center text-gray-400">
+          <span className="text-xl">Resim yok</span>
+        </div>
+      )}
     </div>
   );
 }

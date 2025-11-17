@@ -42,30 +42,25 @@ export default function Navbar() {
   return (
     <>
       <nav
-        className={`fixed top-0 left-0 right-0 z-40 transition-all duration-300 ${
-          scrolled
-            ? 'bg-black/95 backdrop-blur-md shadow-lg'
-            : 'bg-gradient-to-b from-black/80 to-transparent'
+        className={`fixed top-0 left-0 right-0 z-40 transition-all duration-300 bg-white shadow-md ${
+          scrolled ? 'shadow-lg' : ''
         }`}
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-20">
-            <Link href="/" className="flex items-center space-x-3 group">
-              <div className="relative w-12 h-12 transform group-hover:scale-110 transition-transform duration-300">
+            <Link href="/" className="flex items-center group">
+              <div className="relative w-28 h-28 transform group-hover:scale-110 transition-transform duration-300">
                 <Image
                   src={logoSrc}
                   alt="Kavi Mobilya Logo"
                   fill
                   className="object-contain"
                   priority
-                  sizes="48px"
+                  sizes="112px"
+                  style={{
+                    filter: 'brightness(0) saturate(100%) invert(15%) sepia(95%) saturate(5000%) hue-rotate(350deg) brightness(0.9) contrast(1.2)',
+                  }}
                 />
-              </div>
-              <div className="flex flex-col">
-                <span className="text-white font-bold text-xl tracking-wider">
-                  KAVİ MOBİLYA
-                </span>
-                <span className="text-gray-400 text-xs">1995'ten beri</span>
               </div>
             </Link>
 
@@ -74,7 +69,7 @@ export default function Navbar() {
                 <Link
                   key={link.href}
                   href={link.href}
-                  className="text-gray-300 hover:text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200 hover:bg-white/10"
+                  className="text-gray-700 hover:text-[#a42a2a] px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200 hover:bg-gray-50"
                 >
                   {link.label}
                 </Link>
@@ -86,7 +81,7 @@ export default function Navbar() {
                 variant="ghost"
                 size="icon"
                 onClick={() => setCategoriesOpen(true)}
-                className="text-white hover:bg-white/10 hidden sm:flex"
+                className="text-gray-700 hover:text-[#a42a2a] hover:bg-gray-50 hidden sm:flex"
               >
                 <Menu className="h-5 w-5" />
               </Button>
@@ -95,7 +90,7 @@ export default function Navbar() {
                 variant="ghost"
                 size="icon"
                 onClick={() => setCartOpen(true)}
-                className="text-white hover:bg-white/10 relative"
+                className="text-gray-700 hover:text-[#a42a2a] hover:bg-gray-50 relative"
               >
                 <ShoppingCart className="h-5 w-5" />
                 {getTotalItems() > 0 && (
@@ -109,7 +104,7 @@ export default function Navbar() {
                 variant="ghost"
                 size="icon"
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                className="text-white hover:bg-white/10 md:hidden"
+                className="text-gray-700 hover:text-[#a42a2a] hover:bg-gray-50 md:hidden"
               >
                 {mobileMenuOpen ? (
                   <X className="h-6 w-6" />
@@ -122,14 +117,14 @@ export default function Navbar() {
         </div>
 
         {mobileMenuOpen && (
-          <div className="md:hidden bg-black/95 backdrop-blur-md border-t border-white/10">
+          <div className="md:hidden bg-white border-t border-gray-200">
             <div className="px-4 pt-2 pb-4 space-y-1">
               {navLinks.map((link) => (
                 <Link
                   key={link.href}
                   href={link.href}
                   onClick={() => setMobileMenuOpen(false)}
-                  className="block text-gray-300 hover:text-white px-3 py-2 rounded-lg text-base font-medium hover:bg-white/10 transition-colors"
+                  className="block text-gray-700 hover:text-[#a42a2a] px-3 py-2 rounded-lg text-base font-medium hover:bg-gray-50 transition-colors"
                 >
                   {link.label}
                 </Link>
@@ -139,7 +134,7 @@ export default function Navbar() {
                   setCategoriesOpen(true);
                   setMobileMenuOpen(false);
                 }}
-                className="w-full text-left block text-gray-300 hover:text-white px-3 py-2 rounded-lg text-base font-medium hover:bg-white/10 transition-colors"
+                className="w-full text-left block text-gray-700 hover:text-[#a42a2a] px-3 py-2 rounded-lg text-base font-medium hover:bg-gray-50 transition-colors"
               >
                 Kategoriler
               </button>

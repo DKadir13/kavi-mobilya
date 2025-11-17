@@ -16,6 +16,8 @@ export default function CartSidebar({ open, onClose }: CartSidebarProps) {
   const handleWhatsAppContact = () => {
     const message = generateWhatsAppMessage();
     window.open(`https://wa.me/905539019490?text=${message}`, '_blank');
+    // WhatsApp'a yönlendirme yapıldıktan sonra sepeti temizle
+    clearCart();
   };
 
   if (!open) return null;

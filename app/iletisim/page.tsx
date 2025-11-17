@@ -1,6 +1,7 @@
 import { MapPin, Phone, Clock, MessageCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
+import Image from 'next/image';
 
 export default function ContactPage() {
   return (
@@ -20,13 +21,21 @@ export default function ContactPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
             <div className="bg-gray-50 p-8 rounded-2xl shadow-lg">
-              <div className="flex items-center mb-6">
-                <div className="w-12 h-12 bg-gray-800 rounded-lg flex items-center justify-center mr-4">
-                  <span className="text-white font-bold text-lg">KH</span>
+              <div className="mb-8">
+                <div className="relative w-28 h-28 bg-white rounded-lg p-3 shadow-sm mb-3">
+                  <Image
+                    src="/logo.png"
+                    alt="Kavi Home Logo"
+                    fill
+                    className="object-contain"
+                    sizes="112px"
+                    priority
+                  />
                 </div>
                 <h2 className="text-3xl font-bold text-[#0a0a0a]">
                   Kavi Home
                 </h2>
+                <p className="text-sm text-gray-600 mt-1">Ana Mağaza</p>
               </div>
 
               <div className="space-y-6">
@@ -107,11 +116,19 @@ export default function ContactPage() {
             </div>
 
             <div className="bg-gradient-to-br from-[#a42a2a] to-[#8a2222] p-8 rounded-2xl shadow-lg text-white">
-              <div className="flex items-center mb-6">
-                <div className="w-12 h-12 bg-white rounded-lg flex items-center justify-center mr-4">
-                  <span className="text-[#a42a2a] font-bold text-lg">KP</span>
+              <div className="mb-8">
+                <div className="relative w-28 h-28 bg-white rounded-lg p-3 shadow-sm mb-3">
+                  <Image
+                    src="/logo-premium.png"
+                    alt="Kavi Premium Logo"
+                    fill
+                    className="object-contain"
+                    sizes="112px"
+                    priority
+                  />
                 </div>
                 <h2 className="text-3xl font-bold">Kavi Premium</h2>
+                <p className="text-sm text-white/80 mt-1">Özel Koleksiyon</p>
               </div>
 
               <div className="space-y-6">

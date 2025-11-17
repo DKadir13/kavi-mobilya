@@ -73,7 +73,7 @@ export default function CategoriesPage() {
 
   const handleSubmit = useCallback(
     async (e: React.FormEvent) => {
-      e.preventDefault();
+    e.preventDefault();
 
       if (submitting) return;
 
@@ -84,33 +84,33 @@ export default function CategoriesPage() {
 
       setSubmitting(true);
 
-      try {
-        const categoryData = {
+    try {
+      const categoryData = {
           name: formData.name.trim(),
           slug: formData.slug.trim() || generateSlug(formData.name),
           description: formData.description?.trim() || null,
           order_index: parseInt(formData.order_index) || 0,
-        };
+      };
 
-        if (editingCategory) {
+      if (editingCategory) {
           await categoriesApi.update(
             editingCategory._id || editingCategory.id || '',
             categoryData
           );
           toast.success('Kategori başarıyla güncellendi');
-        } else {
+      } else {
           await categoriesApi.create(categoryData);
           toast.success('Kategori başarıyla eklendi');
-        }
+      }
 
-        setDialogOpen(false);
-        resetForm();
-        loadCategories();
+      setDialogOpen(false);
+      resetForm();
+      loadCategories();
       } catch (error: any) {
         toast.error(error.message || 'Kategori kaydedilirken bir hata oluştu');
       } finally {
         setSubmitting(false);
-      }
+    }
     },
     [formData, editingCategory, loadCategories, submitting, generateSlug]
   );
@@ -128,15 +128,15 @@ export default function CategoriesPage() {
 
   const handleDelete = useCallback(
     async (id: string) => {
-      if (!confirm('Bu kategoriyi silmek istediğinizden emin misiniz?')) return;
+    if (!confirm('Bu kategoriyi silmek istediğinizden emin misiniz?')) return;
 
-      try {
+    try {
         await categoriesApi.delete(id);
         toast.success('Kategori başarıyla silindi');
-        loadCategories();
+      loadCategories();
       } catch (error: any) {
         toast.error(error.message || 'Kategori silinirken bir hata oluştu');
-      }
+    }
     },
     [loadCategories]
   );
@@ -306,36 +306,36 @@ export default function CategoriesPage() {
                   const categoryId = category._id || category.id || '';
                   return (
                     <tr key={categoryId} className="hover:bg-gray-50">
-                      <td className="px-4 py-3 text-sm text-gray-600">
-                        {category.order_index}
-                      </td>
-                      <td className="px-4 py-3 font-medium">{category.name}</td>
-                      <td className="px-4 py-3 text-sm text-gray-600">
-                        {category.slug}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-gray-600">
-                        {category.description || '-'}
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleEdit(category)}
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
+                    <td className="px-4 py-3 text-sm text-gray-600">
+                      {category.order_index}
+                    </td>
+                    <td className="px-4 py-3 font-medium">{category.name}</td>
+                    <td className="px-4 py-3 text-sm text-gray-600">
+                      {category.slug}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-gray-600">
+                      {category.description || '-'}
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleEdit(category)}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
                             onClick={() => handleDelete(categoryId)}
-                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </td>
-                    </tr>
+                          className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
                   );
                 })}
               </tbody>

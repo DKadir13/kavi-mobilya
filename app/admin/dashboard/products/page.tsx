@@ -103,7 +103,7 @@ export default function ProductsManagementPage() {
 
   const handleSubmit = useCallback(
     async (e: React.FormEvent) => {
-      e.preventDefault();
+    e.preventDefault();
 
       if (submitting) return; // Prevent double submit
 
@@ -124,34 +124,34 @@ export default function ProductsManagementPage() {
         // İlk resmi image_url olarak kullan (geriye dönük uyumluluk için)
         const mainImage = formData.images.length > 0 ? formData.images[0] : formData.image_url?.trim() || null;
 
-        const productData = {
+      const productData = {
           name: formData.name.trim(),
           description: formData.description?.trim() || null,
-          price: formData.price ? parseFloat(formData.price) : null,
+        price: formData.price ? parseFloat(formData.price) : null,
           image_url: mainImage,
           images: formData.images.length > 0 ? formData.images : (formData.image_url ? [formData.image_url] : []),
           store_type: formData.store_type as 'home' | 'premium',
           category_id: formData.category_id === 'none' ? null : formData.category_id || null,
-          is_featured: formData.is_featured,
-          is_active: formData.is_active,
-        };
+        is_featured: formData.is_featured,
+        is_active: formData.is_active,
+      };
 
-        if (editingProduct) {
+      if (editingProduct) {
           await productsApi.update(editingProduct._id || editingProduct.id || '', productData);
           toast.success('Ürün başarıyla güncellendi');
-        } else {
+      } else {
           await productsApi.create(productData);
           toast.success(`Ürün ${formData.store_type === 'premium' ? 'Kavi Premium' : 'Kavi Home'} mağazasına başarıyla eklendi`);
-        }
+      }
 
-        setDialogOpen(false);
-        resetForm();
-        loadData();
+      setDialogOpen(false);
+      resetForm();
+      loadData();
       } catch (error: any) {
         toast.error(error.message || 'Ürün kaydedilirken bir hata oluştu');
       } finally {
         setSubmitting(false);
-      }
+    }
     },
     [formData, editingProduct, loadData, submitting]
   );
@@ -184,15 +184,15 @@ export default function ProductsManagementPage() {
 
   const handleDelete = useCallback(
     async (id: string) => {
-      if (!confirm('Bu ürünü silmek istediğinizden emin misiniz?')) return;
+    if (!confirm('Bu ürünü silmek istediğinizden emin misiniz?')) return;
 
-      try {
+    try {
         await productsApi.delete(id);
         toast.success('Ürün silindi');
-        loadData();
+      loadData();
       } catch (error: any) {
         toast.error(error.message || 'Ürün silinirken bir hata oluştu');
-      }
+    }
     },
     [loadData]
   );
@@ -359,8 +359,8 @@ export default function ProductsManagementPage() {
                         if (!catId) return null;
                         return (
                           <SelectItem key={catId} value={catId}>
-                            {cat.name}
-                          </SelectItem>
+                          {cat.name}
+                        </SelectItem>
                         );
                       })}
                     </SelectContent>
@@ -462,10 +462,10 @@ export default function ProductsManagementPage() {
                   <Label htmlFor="image_url" className="text-xs text-gray-500">
                     Veya URL ile ekle (opsiyonel)
                   </Label>
-                  <Input
-                    id="image_url"
-                    type="url"
-                    value={formData.image_url}
+                <Input
+                  id="image_url"
+                  type="url"
+                  value={formData.image_url}
                     onChange={(e) => {
                       setFormData({ ...formData, image_url: e.target.value });
                     }}
@@ -477,11 +477,11 @@ export default function ProductsManagementPage() {
                         setFormData({ ...formData, images: newImages });
                         setImagePreview(newPreview);
                         toast.success('Resim URL\'si eklendi');
-                      }
+                  }
                     }}
-                    placeholder="https://..."
+                  placeholder="https://..."
                     className="text-sm"
-                  />
+                />
                 </div>
               </div>
 
@@ -520,7 +520,7 @@ export default function ProductsManagementPage() {
                     </>
                   ) : (
                     <>
-                      {editingProduct ? 'Güncelle' : 'Ekle'}
+                  {editingProduct ? 'Güncelle' : 'Ekle'}
                       {!editingProduct && formData.store_type && (
                         <span className="ml-2 text-xs">
                           ({formData.store_type === 'premium' ? 'Kavi Premium' : 'Kavi Home'})
@@ -601,86 +601,86 @@ export default function ProductsManagementPage() {
 
                   return (
                     <tr key={productId} className="hover:bg-gray-50">
-                      <td className="px-4 py-3">
-                        <div className="relative w-16 h-16 bg-gray-100 rounded">
-                          {product.image_url ? (
-                            <Image
-                              src={product.image_url}
-                              alt={product.name}
-                              fill
-                              className="object-cover rounded"
+                    <td className="px-4 py-3">
+                      <div className="relative w-16 h-16 bg-gray-100 rounded">
+                        {product.image_url ? (
+                          <Image
+                            src={product.image_url}
+                            alt={product.name}
+                            fill
+                            className="object-cover rounded"
                               sizes="64px"
                               loading="lazy"
-                            />
-                          ) : (
-                            <div className="w-full h-full flex items-center justify-center text-xs text-gray-400">
-                              Resim yok
-                            </div>
-                          )}
-                        </div>
-                      </td>
-                      <td className="px-4 py-3">
-                        <div>
-                          <p className="font-medium">{product.name}</p>
-                          {product.is_featured && (
-                            <span className="text-xs bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded">
-                              Öne Çıkan
-                            </span>
-                          )}
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 text-sm text-gray-600">
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-xs text-gray-400">
+                            Resim yok
+                          </div>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div>
+                        <p className="font-medium">{product.name}</p>
+                        {product.is_featured && (
+                          <span className="text-xs bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded">
+                            Öne Çıkan
+                          </span>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 text-sm text-gray-600">
                         {categoryName || '-'}
-                      </td>
-                      <td className="px-4 py-3">
-                        <span
-                          className={`text-xs px-2 py-1 rounded ${
-                            product.store_type === 'premium'
-                              ? 'bg-[#a42a2a] text-white'
-                              : 'bg-gray-200 text-gray-800'
-                          }`}
+                    </td>
+                    <td className="px-4 py-3">
+                      <span
+                        className={`text-xs px-2 py-1 rounded ${
+                          product.store_type === 'premium'
+                            ? 'bg-[#a42a2a] text-white'
+                            : 'bg-gray-200 text-gray-800'
+                        }`}
+                      >
+                        {product.store_type === 'premium'
+                          ? 'Premium'
+                          : 'Home'}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 font-medium">
+                      {product.price
+                        ? `${product.price.toLocaleString('tr-TR')} TL`
+                        : '-'}
+                    </td>
+                    <td className="px-4 py-3">
+                      <span
+                        className={`text-xs px-2 py-1 rounded ${
+                          product.is_active
+                            ? 'bg-green-100 text-green-800'
+                            : 'bg-red-100 text-red-800'
+                        }`}
+                      >
+                        {product.is_active ? 'Aktif' : 'Pasif'}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleEdit(product)}
                         >
-                          {product.store_type === 'premium'
-                            ? 'Premium'
-                            : 'Home'}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 font-medium">
-                        {product.price
-                          ? `${product.price.toLocaleString('tr-TR')} TL`
-                          : '-'}
-                      </td>
-                      <td className="px-4 py-3">
-                        <span
-                          className={`text-xs px-2 py-1 rounded ${
-                            product.is_active
-                              ? 'bg-green-100 text-green-800'
-                              : 'bg-red-100 text-red-800'
-                          }`}
-                        >
-                          {product.is_active ? 'Aktif' : 'Pasif'}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleEdit(product)}
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
                             onClick={() => handleDelete(productId)}
-                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </td>
-                    </tr>
+                          className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
                   );
                 })}
               </tbody>

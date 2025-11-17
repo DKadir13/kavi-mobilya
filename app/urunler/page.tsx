@@ -1,11 +1,11 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { productsApi, categoriesApi } from '@/lib/api';
 import { useCart } from '@/contexts/CartContext';
 import { Button } from '@/components/ui/button';
-import { ShoppingCart, Filter } from 'lucide-react';
+import { ShoppingCart, Filter, ChevronLeft, ChevronRight } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { toast } from 'sonner';
@@ -24,6 +24,7 @@ type Product = {
   description: string | null;
   price: number | null;
   image_url: string | null;
+  images?: string[];
   store_type: 'home' | 'premium';
   category_id: string | {
     _id: string;
@@ -221,33 +222,9 @@ export default function ProductsPage() {
                 className="bg-white rounded-xl overflow-hidden shadow-md hover:shadow-xl transition-all group"
               >
                 <Link href={`/urunler/${product._id || product.id}`}>
-                  <div className="relative h-64 bg-gray-100 overflow-hidden">
-                    {product.image_url ? (
-                      <Image
-                        src={product.image_url}
-                        alt={product.name}
-                        fill
-                        className="object-cover group-hover:scale-110 transition-transform duration-300"
-                      />
-                    ) : (
-                      <div className="h-full flex items-center justify-center text-gray-400">
-                        Resim yok
-                      </div>
-                    )}
-                    <div className="absolute top-2 right-2">
-                      <span
-                        className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                          product.store_type === 'premium'
-                            ? 'bg-[#a42a2a] text-white'
-                            : 'bg-gray-800 text-white'
-                        }`}
-                      >
-                        {product.store_type === 'premium'
-                          ? 'Premium'
-                          : 'Home'}
-                      </span>
-                    </div>
-                  </div>
+                  <ProductImageCarousel 
+                    product={product}
+                  />
                 </Link>
 
                 <div className="p-4">
@@ -276,6 +253,153 @@ export default function ProductsPage() {
             ))}
           </div>
         )}
+      </div>
+    </div>
+  );
+}
+
+// Product Image Carousel Component
+function ProductImageCarousel({ product }: { product: Product }) {
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  
+  // Tüm resimleri birleştir (image_url + images array)
+  const images = useMemo(() => {
+    const imageList: string[] = [];
+    if (product.image_url) {
+      imageList.push(product.image_url);
+    }
+    if (product.images && Array.isArray(product.images)) {
+      product.images.forEach(img => {
+        if (img && !imageList.includes(img)) {
+          imageList.push(img);
+        }
+      });
+    }
+    return imageList;
+  }, [product.image_url, product.images]);
+
+  const hasMultipleImages = images.length > 1;
+
+  // Otomatik geçiş efekti
+  useEffect(() => {
+    if (hasMultipleImages) {
+      intervalRef.current = setInterval(() => {
+        setCurrentImageIndex((prev) => (prev + 1) % images.length);
+      }, 5000); // 5 saniye
+
+      return () => {
+        if (intervalRef.current) {
+          clearInterval(intervalRef.current);
+        }
+      };
+    }
+  }, [hasMultipleImages, images.length]);
+
+  // Mouse hover'da durdur
+  const handleMouseEnter = () => {
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+    }
+  };
+
+  const handleMouseLeave = () => {
+    if (hasMultipleImages) {
+      intervalRef.current = setInterval(() => {
+        setCurrentImageIndex((prev) => (prev + 1) % images.length);
+      }, 5000);
+    }
+  };
+
+  const goToPrevious = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setCurrentImageIndex((prev) => (prev - 1 + images.length) % images.length);
+  };
+
+  const goToNext = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setCurrentImageIndex((prev) => (prev + 1) % images.length);
+  };
+
+  const goToImage = (e: React.MouseEvent, index: number) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setCurrentImageIndex(index);
+  };
+
+  return (
+    <div 
+      className="relative h-64 bg-gray-100 overflow-hidden group"
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
+    >
+      {images.length > 0 ? (
+        <>
+          <Image
+            src={images[currentImageIndex]}
+            alt={`${product.name} - Resim ${currentImageIndex + 1}`}
+            fill
+            className="object-cover group-hover:scale-110 transition-transform duration-300"
+            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
+          />
+          
+          {/* Navigation Buttons */}
+          {hasMultipleImages && (
+            <>
+              <button
+                onClick={goToPrevious}
+                className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                aria-label="Önceki resim"
+              >
+                <ChevronLeft className="h-5 w-5" />
+              </button>
+              <button
+                onClick={goToNext}
+                className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                aria-label="Sonraki resim"
+              >
+                <ChevronRight className="h-5 w-5" />
+              </button>
+
+              {/* Dots Indicator */}
+              <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-2 z-10">
+                {images.map((_, index) => (
+                  <button
+                    key={index}
+                    onClick={(e) => goToImage(e, index)}
+                    className={`w-2 h-2 rounded-full transition-all ${
+                      index === currentImageIndex
+                        ? 'bg-white w-6'
+                        : 'bg-white/50 hover:bg-white/75'
+                    }`}
+                    aria-label={`Resim ${index + 1}`}
+                  />
+                ))}
+              </div>
+            </>
+          )}
+        </>
+      ) : (
+        <div className="h-full flex items-center justify-center text-gray-400">
+          Resim yok
+        </div>
+      )}
+      
+      {/* Store Type Badge */}
+      <div className="absolute top-2 right-2 z-10">
+        <span
+          className={`px-3 py-1 rounded-full text-xs font-semibold ${
+            product.store_type === 'premium'
+              ? 'bg-[#a42a2a] text-white'
+              : 'bg-gray-800 text-white'
+          }`}
+        >
+          {product.store_type === 'premium'
+            ? 'Premium'
+            : 'Home'}
+        </span>
       </div>
     </div>
   );

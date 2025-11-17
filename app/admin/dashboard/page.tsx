@@ -152,30 +152,30 @@ export default function AdminDashboardPage() {
                 const productStoreType = product?.store_type || '';
 
                 return (
-                  <div
+                <div
                     key={saleId}
-                    className="flex items-center justify-between p-4 border rounded-lg"
-                  >
-                    <div>
+                  className="flex items-center justify-between p-4 border rounded-lg"
+                >
+                  <div>
                       <p className="font-medium">{productName}</p>
-                      <p className="text-sm text-gray-500">
+                    <p className="text-sm text-gray-500">
                         {productStoreType === 'premium'
-                          ? 'Kavi Premium'
-                          : 'Kavi Home'}
-                      </p>
-                      <p className="text-xs text-gray-400">
-                        {new Date(sale.sale_date).toLocaleDateString('tr-TR')}
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-bold text-[#a42a2a]">
-                        {sale.sale_price.toLocaleString('tr-TR')} TL
-                      </p>
-                      <p className="text-sm text-gray-500">
-                        Adet: {sale.quantity}
-                      </p>
-                    </div>
+                        ? 'Kavi Premium'
+                        : 'Kavi Home'}
+                    </p>
+                    <p className="text-xs text-gray-400">
+                      {new Date(sale.sale_date).toLocaleDateString('tr-TR')}
+                    </p>
                   </div>
+                  <div className="text-right">
+                    <p className="font-bold text-[#a42a2a]">
+                      {sale.sale_price.toLocaleString('tr-TR')} TL
+                    </p>
+                    <p className="text-sm text-gray-500">
+                      Adet: {sale.quantity}
+                    </p>
+                  </div>
+                </div>
                 );
               })}
             </div>

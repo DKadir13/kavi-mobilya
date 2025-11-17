@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { Phone, MapPin, Mail } from 'lucide-react';
+import Image from 'next/image';
 
 export default function Footer() {
   return (
@@ -7,14 +8,17 @@ export default function Footer() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
           <div>
-            <div className="flex items-center space-x-3 mb-4">
-              <div className="w-10 h-10 bg-[#a42a2a] rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-lg">KM</span>
+            <div className="mb-4">
+              <div className="relative w-24 h-24 bg-white rounded-lg p-3 flex-shrink-0">
+                <Image
+                  src="/logo.png"
+                  alt="Kavi Mobilya Logo"
+                  fill
+                  className="object-contain"
+                  sizes="96px"
+                />
               </div>
-              <div>
-                <h3 className="font-bold text-lg">KAVİ MOBİLYA</h3>
-                <p className="text-sm text-gray-400">1995'ten beri</p>
-              </div>
+              <p className="text-sm text-gray-400 mt-2">1995'ten beri</p>
             </div>
             <p className="text-gray-400 text-sm">
               1995 yılından beri Ankara'da kaliteli mobilya üretimi ve
@@ -61,7 +65,18 @@ export default function Footer() {
           </div>
 
           <div>
-            <h4 className="font-bold mb-4 text-[#a42a2a]">Kavi Home</h4>
+            <div className="flex items-center space-x-2 mb-4">
+              <div className="relative w-8 h-8 bg-white rounded p-1 flex-shrink-0">
+                <Image
+                  src="/logo.png"
+                  alt="Kavi Home Logo"
+                  fill
+                  className="object-contain"
+                  sizes="32px"
+                />
+              </div>
+              <h4 className="font-bold text-[#a42a2a]">Kavi Home</h4>
+            </div>
             <div className="space-y-3">
               <div className="flex items-start space-x-2 text-sm">
                 <MapPin className="h-4 w-4 text-[#a42a2a] mt-1 flex-shrink-0" />
@@ -83,7 +98,18 @@ export default function Footer() {
           </div>
 
           <div>
-            <h4 className="font-bold mb-4 text-[#a42a2a]">Kavi Premium</h4>
+            <div className="flex items-center space-x-2 mb-4">
+              <div className="relative w-8 h-8 bg-white rounded p-1 flex-shrink-0">
+                <Image
+                  src="/logo-premium.png"
+                  alt="Kavi Premium Logo"
+                  fill
+                  className="object-contain"
+                  sizes="32px"
+                />
+              </div>
+              <h4 className="font-bold text-[#a42a2a]">Kavi Premium</h4>
+            </div>
             <div className="space-y-3">
               <div className="flex items-start space-x-2 text-sm">
                 <MapPin className="h-4 w-4 text-[#a42a2a] mt-1 flex-shrink-0" />
@@ -104,11 +130,28 @@ export default function Footer() {
           </div>
         </div>
 
-        <div className="mt-8 pt-8 border-t border-gray-800 text-center text-sm text-gray-400">
-          <p>
+        <div className="mt-8 pt-8 border-t border-gray-800">
+          <div className="text-center space-y-3">
+            <div className="text-sm text-gray-400">
+              <p className="mb-2">
             &copy; {new Date().getFullYear()} Kavi Mobilya. Tüm hakları
             saklıdır.
           </p>
+              <p className="mb-2">
+                <a
+                  href="https://www.kavimobilya.com"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:text-white transition-colors"
+                >
+                  www.kavimobilya.com
+                </a>
+              </p>
+            </div>
+            <div className="text-xs text-gray-500 pt-2 border-t border-gray-800">
+              <p>VAVI SOFTWARE TARAFINDAN YAPILMIŞTIR</p>
+            </div>
+          </div>
         </div>
       </div>
     </footer>

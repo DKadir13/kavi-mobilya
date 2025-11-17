@@ -29,14 +29,31 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
 
   useEffect(() => {
-    const saved = localStorage.getItem('kavi-cart');
-    if (saved) {
-      setItems(JSON.parse(saved));
+    try {
+      const saved = localStorage.getItem('kavi-cart');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) {
+          setItems(parsed);
+        }
+      }
+    } catch (error) {
+      console.error('Sepet verileri yüklenirken hata oluştu:', error);
+      localStorage.removeItem('kavi-cart');
     }
   }, []);
 
   useEffect(() => {
-    localStorage.setItem('kavi-cart', JSON.stringify(items));
+    try {
+      if (items.length > 0) {
+        localStorage.setItem('kavi-cart', JSON.stringify(items));
+      } else {
+        // Sepet boşsa localStorage'dan da temizle
+        localStorage.removeItem('kavi-cart');
+      }
+    } catch (error) {
+      console.error('Sepet verileri kaydedilirken hata oluştu:', error);
+    }
   }, [items]);
 
   const addToCart = useCallback((item: Omit<CartItem, 'quantity'>) => {
@@ -76,6 +93,11 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
   const clearCart = useCallback(() => {
     setItems([]);
+    try {
+      localStorage.removeItem('kavi-cart');
+    } catch (error) {
+      console.error('Sepet temizlenirken hata oluştu:', error);
+    }
     toast.success('Sepet temizlendi');
   }, []);
 

@@ -66,7 +66,7 @@ export default function Home() {
               <Button
                 size="lg"
                 variant="outline"
-                className="border-white text-white hover:bg-white hover:text-[#0a0a0a]"
+                className="!border-white !text-white hover:bg-white hover:!text-[#0a0a0a] transition-colors bg-transparent"
               >
                 İletişime Geçin
               </Button>
@@ -90,7 +90,7 @@ export default function Home() {
                   </p>
                   <Button
                     variant="outline"
-                    className="mt-6 border-white text-white hover:bg-white hover:text-gray-900"
+                    className="mt-6 !border-white !text-white hover:bg-white hover:!text-gray-900 transition-colors bg-transparent"
                   >
                     Ürünleri Görüntüle
                   </Button>
@@ -110,7 +110,7 @@ export default function Home() {
                   </p>
                   <Button
                     variant="outline"
-                    className="mt-6 border-white text-white hover:bg-white hover:text-[#a42a2a]"
+                    className="mt-6 !border-white !text-white hover:bg-white hover:!text-[#a42a2a] transition-colors bg-transparent"
                   >
                     Ürünleri Görüntüle
                   </Button>
@@ -121,16 +121,16 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="py-16 bg-gray-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-[#0a0a0a] mb-4">
-              Öne Çıkan Ürünler
-            </h2>
-            <p className="text-gray-600">
-              En popüler ve beğenilen ürünlerimiz
-            </p>
-          </div>
+        <section className="py-16 bg-gray-50">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="text-center mb-12">
+              <h2 className="text-3xl font-bold text-[#0a0a0a] mb-4">
+                Öne Çıkan Ürünler
+              </h2>
+              <p className="text-gray-600">
+                En popüler ve beğenilen ürünlerimiz
+              </p>
+            </div>
 
           {featuredProducts.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -181,8 +181,8 @@ export default function Home() {
               </p>
             </div>
           )}
-        </div>
-      </section>
+          </div>
+        </section>
 
       <section className="py-16 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

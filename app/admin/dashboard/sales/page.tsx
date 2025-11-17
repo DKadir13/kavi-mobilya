@@ -96,7 +96,7 @@ export default function SalesPage() {
 
   const handleSubmit = useCallback(
     async (e: React.FormEvent) => {
-      e.preventDefault();
+    e.preventDefault();
 
       if (submitting) return;
 
@@ -112,33 +112,33 @@ export default function SalesPage() {
 
       setSubmitting(true);
 
-      try {
-        const saleData = {
-          product_id: formData.product_id,
+    try {
+      const saleData = {
+        product_id: formData.product_id,
           quantity: parseInt(formData.quantity) || 1,
-          sale_price: parseFloat(formData.sale_price),
+        sale_price: parseFloat(formData.sale_price),
           customer_name: formData.customer_name?.trim() || null,
           customer_phone: formData.customer_phone?.trim() || null,
           notes: formData.notes?.trim() || null,
-          sale_date: formData.sale_date,
-        };
+        sale_date: formData.sale_date,
+      };
 
-        if (editingSale) {
+      if (editingSale) {
           await salesApi.update(editingSale._id || editingSale.id || '', saleData);
           toast.success('Satış başarıyla güncellendi');
-        } else {
+      } else {
           await salesApi.create(saleData);
           toast.success('Satış başarıyla eklendi');
-        }
+      }
 
-        setDialogOpen(false);
-        resetForm();
-        loadData();
+      setDialogOpen(false);
+      resetForm();
+      loadData();
       } catch (error: any) {
         toast.error(error.message || 'Satış kaydedilirken bir hata oluştu');
       } finally {
         setSubmitting(false);
-      }
+    }
     },
     [formData, editingSale, loadData, submitting]
   );
@@ -164,15 +164,15 @@ export default function SalesPage() {
 
   const handleDelete = useCallback(
     async (id: string) => {
-      if (!confirm('Bu satışı silmek istediğinizden emin misiniz?')) return;
+    if (!confirm('Bu satışı silmek istediğinizden emin misiniz?')) return;
 
-      try {
+    try {
         await salesApi.delete(id);
         toast.success('Satış silindi');
-        loadData();
+      loadData();
       } catch (error: any) {
         toast.error(error.message || 'Satış silinirken bir hata oluştu');
-      }
+    }
     },
     [loadData]
   );
@@ -196,11 +196,11 @@ export default function SalesPage() {
       const product = products.find(
         (p) => (p._id || p.id) === productId
       );
-      setFormData({
-        ...formData,
-        product_id: productId,
-        sale_price: product?.price?.toString() || '',
-      });
+    setFormData({
+      ...formData,
+      product_id: productId,
+      sale_price: product?.price?.toString() || '',
+    });
     },
     [products, formData]
   );
@@ -249,11 +249,11 @@ export default function SalesPage() {
                       const productId = product._id || product.id || '';
                       return (
                         <SelectItem key={productId} value={productId}>
-                          {product.name} -{' '}
-                          {product.store_type === 'premium'
-                            ? 'Premium'
-                            : 'Home'}
-                        </SelectItem>
+                        {product.name} -{' '}
+                        {product.store_type === 'premium'
+                          ? 'Premium'
+                          : 'Home'}
+                      </SelectItem>
                       );
                     })}
                   </SelectContent>
@@ -447,60 +447,60 @@ export default function SalesPage() {
 
                   return (
                     <tr key={saleId} className="hover:bg-gray-50">
-                      <td className="px-4 py-3 text-sm">
-                        {new Date(sale.sale_date).toLocaleDateString('tr-TR')}
-                      </td>
-                      <td className="px-4 py-3">
-                        <div>
+                    <td className="px-4 py-3 text-sm">
+                      {new Date(sale.sale_date).toLocaleDateString('tr-TR')}
+                    </td>
+                    <td className="px-4 py-3">
+                      <div>
                           <p className="font-medium">{productName}</p>
                           {productStoreType && (
-                            <span
-                              className={`text-xs px-2 py-0.5 rounded ${
+                        <span
+                          className={`text-xs px-2 py-0.5 rounded ${
                                 productStoreType === 'premium'
-                                  ? 'bg-[#a42a2a] text-white'
-                                  : 'bg-gray-200 text-gray-800'
-                              }`}
-                            >
+                              ? 'bg-[#a42a2a] text-white'
+                              : 'bg-gray-200 text-gray-800'
+                          }`}
+                        >
                               {productStoreType === 'premium'
-                                ? 'Premium'
-                                : 'Home'}
-                            </span>
+                            ? 'Premium'
+                            : 'Home'}
+                        </span>
                           )}
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 text-sm">
-                        {sale.customer_name || '-'}
-                      </td>
-                      <td className="px-4 py-3 text-sm">{sale.quantity}</td>
-                      <td className="px-4 py-3 font-medium">
-                        {sale.sale_price.toLocaleString('tr-TR')} TL
-                      </td>
-                      <td className="px-4 py-3 font-bold text-[#a42a2a]">
-                        {(sale.quantity * sale.sale_price).toLocaleString(
-                          'tr-TR'
-                        )}{' '}
-                        TL
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleEdit(sale)}
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 text-sm">
+                      {sale.customer_name || '-'}
+                    </td>
+                    <td className="px-4 py-3 text-sm">{sale.quantity}</td>
+                    <td className="px-4 py-3 font-medium">
+                      {sale.sale_price.toLocaleString('tr-TR')} TL
+                    </td>
+                    <td className="px-4 py-3 font-bold text-[#a42a2a]">
+                      {(sale.quantity * sale.sale_price).toLocaleString(
+                        'tr-TR'
+                      )}{' '}
+                      TL
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleEdit(sale)}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
                             onClick={() => handleDelete(saleId)}
-                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </td>
-                    </tr>
+                          className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
                   );
                 })}
               </tbody>

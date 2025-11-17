@@ -24,12 +24,12 @@ export default function RootLayout({
     <html lang="tr">
       <body className={inter.className}>
         <ErrorBoundaryWrapper>
-          <CartProvider>
-            <Navbar />
-            <main className="min-h-screen">{children}</main>
-            <Footer />
+        <CartProvider>
+          <Navbar />
+          <main className="min-h-screen">{children}</main>
+          <Footer />
             <Toaster />
-          </CartProvider>
+        </CartProvider>
         </ErrorBoundaryWrapper>
       </body>
     </html>

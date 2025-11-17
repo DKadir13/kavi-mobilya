@@ -47,7 +47,7 @@ export default function AdminLoginPage() {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({ email, password }),
-        });
+      });
 
         if (!response.ok) {
           const error = await response.json();
