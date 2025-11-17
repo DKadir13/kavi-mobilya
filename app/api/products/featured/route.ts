@@ -5,6 +5,18 @@ import Category from '@/models/Category';
 
 export async function GET() {
   try {
+    // Validate MongoDB URI before connecting
+    const mongoUri = process.env.MONGODB_URI;
+    if (!mongoUri || (!mongoUri.startsWith('mongodb://') && !mongoUri.startsWith('mongodb+srv://'))) {
+      console.error('Invalid MongoDB URI format');
+      return NextResponse.json(
+        { 
+          error: 'MongoDB bağlantı yapılandırması hatalı. Lütfen MONGODB_URI environment variable\'ını kontrol edin.',
+        }, 
+        { status: 500 }
+      );
+    }
+
     await connectDB();
     const products: any[] = await Product.find({ is_featured: true, is_active: true })
       .select('name image_url store_type price category_id featured_order')
@@ -56,7 +68,20 @@ export async function GET() {
     
     return response;
   } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error('Featured Products API Error:', error);
+    
+    // Check if it's a MongoDB connection error
+    const errorMessage = error.message || 'Öne çıkan ürünler yüklenirken bir hata oluştu';
+    if (errorMessage.includes('Invalid scheme') || errorMessage.includes('mongodb://')) {
+      return NextResponse.json(
+        { 
+          error: 'MongoDB bağlantı yapılandırması hatalı. Lütfen MONGODB_URI environment variable\'ını kontrol edin.',
+        }, 
+        { status: 500 }
+      );
+    }
+    
+    return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
 }
 

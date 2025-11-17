@@ -44,6 +44,9 @@ export default function Navbar() {
     return null;
   }
 
+  // Ana sayfada gölge yok
+  const isHomePage = pathname === '/';
+
   return (
     <>
       {/* Üst Bilgi Çubuğu */}
@@ -70,8 +73,8 @@ export default function Navbar() {
       </div>
 
       <nav
-        className={`fixed top-10 left-0 right-0 z-40 transition-all duration-300 bg-white shadow-md ${
-          scrolled ? 'shadow-lg' : ''
+        className={`fixed top-10 left-0 right-0 z-40 transition-all duration-300 bg-white ${
+          isHomePage ? '' : scrolled ? 'shadow-md' : ''
         }`}
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

@@ -2,9 +2,16 @@ import mongoose from 'mongoose';
 
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://kavihomemobilya_db_user:Vy4tGlPZgjkGPFth@cluster0.rpfuter.mongodb.net/kavi_mobilya?retryWrites=true&w=majority&appName=Cluster0';
 
+// Validate MongoDB URI format
 if (!MONGODB_URI) {
   console.error('MONGODB_URI is not defined!');
   throw new Error('Lütfen .env.local veya .env dosyasında MONGODB_URI değişkenini tanımlayın');
+}
+
+// Validate URI format
+if (!MONGODB_URI.startsWith('mongodb://') && !MONGODB_URI.startsWith('mongodb+srv://')) {
+  console.error('Invalid MongoDB URI format:', MONGODB_URI.substring(0, 20) + '...');
+  throw new Error('MongoDB URI must start with "mongodb://" or "mongodb+srv://"');
 }
 
 // Log MongoDB URI (without password) for debugging - only in development

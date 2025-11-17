@@ -5,6 +5,18 @@ import Category from '@/models/Category';
 
 export async function GET(request: NextRequest) {
   try {
+    // Validate MongoDB URI before connecting
+    const mongoUri = process.env.MONGODB_URI;
+    if (!mongoUri || (!mongoUri.startsWith('mongodb://') && !mongoUri.startsWith('mongodb+srv://'))) {
+      console.error('Invalid MongoDB URI format');
+      return NextResponse.json(
+        { 
+          error: 'MongoDB bağlantı yapılandırması hatalı. Lütfen MONGODB_URI environment variable\'ını kontrol edin.',
+        }, 
+        { status: 500 }
+      );
+    }
+
     await connectDB();
     const { searchParams } = new URL(request.url);
     const category_id = searchParams.get('category_id');
@@ -71,9 +83,21 @@ export async function GET(request: NextRequest) {
     return response;
   } catch (error: any) {
     console.error('Products API Error:', error);
+    
+    // Check if it's a MongoDB connection error
+    const errorMessage = error.message || 'Ürünler yüklenirken bir hata oluştu';
+    if (errorMessage.includes('Invalid scheme') || errorMessage.includes('mongodb://')) {
+      return NextResponse.json(
+        { 
+          error: 'MongoDB bağlantı yapılandırması hatalı. Lütfen MONGODB_URI environment variable\'ını kontrol edin.',
+        }, 
+        { status: 500 }
+      );
+    }
+    
     return NextResponse.json(
       { 
-        error: error.message || 'Ürünler yüklenirken bir hata oluştu',
+        error: errorMessage,
         details: process.env.NODE_ENV === 'development' ? error.stack : undefined
       }, 
       { status: 500 }

@@ -119,8 +119,6 @@ export default function Home() {
       <div className={`transition-opacity duration-2500 ease-out ${
         showIntro ? 'opacity-0' : 'opacity-100'
       }`}>
-        {/* Gradient Background Overlay */}
-        <div className="fixed inset-0 bg-gradient-to-br from-[#0a0a0a] via-[#1a1a1a] to-[#a42a2a] opacity-30 pointer-events-none z-0" />
 
         {/* Hero Carousel Section */}
       <section className="relative h-[600px] overflow-hidden">
