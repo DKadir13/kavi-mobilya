@@ -14,7 +14,6 @@ import {
   CarouselPrevious,
   type CarouselApi,
 } from '@/components/ui/carousel';
-import Autoplay from 'embla-carousel-autoplay';
 
 type Product = {
   _id: string;
@@ -51,6 +50,25 @@ export default function Home() {
     api.on('select', () => {
       setCurrent(api.selectedScrollSnap());
     });
+  }, [api]);
+
+  // Autoplay functionality
+  useEffect(() => {
+    if (!api) {
+      return;
+    }
+
+    const autoplayInterval = setInterval(() => {
+      if (api.canScrollNext()) {
+        api.scrollNext();
+      } else {
+        api.scrollTo(0); // Loop back to start
+      }
+    }, 5000);
+
+    return () => {
+      clearInterval(autoplayInterval);
+    };
   }, [api]);
 
   const loadFeaturedProducts = async () => {
@@ -113,12 +131,6 @@ export default function Home() {
             align: 'start',
             loop: true,
           }}
-          plugins={[
-            Autoplay({
-              delay: 5000,
-              stopOnInteraction: false,
-            }),
-          ]}
         >
           <CarouselContent className="h-[600px]">
             <CarouselItem className="h-full">
