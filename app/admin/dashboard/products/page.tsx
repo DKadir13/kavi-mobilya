@@ -443,13 +443,21 @@ export default function ProductsManagementPage() {
                     {(imagePreview.length > 0 ? imagePreview : formData.images).map((imageUrl, index) => (
                       <div key={index} className="relative group">
                         <div className="relative aspect-square rounded-lg overflow-hidden border-2 border-gray-200">
-                          <Image
-                            src={imageUrl}
-                            alt={`Ürün resmi ${index + 1}`}
-                            fill
-                            className="object-cover"
-                            sizes="(max-width: 768px) 50vw, 25vw"
-                          />
+                          {imageUrl.startsWith('data:') ? (
+                            <img
+                              src={imageUrl}
+                              alt={`Preview ${index + 1}`}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <Image
+                              src={imageUrl}
+                              alt={`Ürün resmi ${index + 1}`}
+                              fill
+                              className="object-cover"
+                              sizes="(max-width: 768px) 50vw, 25vw"
+                            />
+                          )}
                           <button
                             type="button"
                             onClick={() => handleRemoveImage(index, imageUrl)}
@@ -615,14 +623,22 @@ export default function ProductsManagementPage() {
                     <td className="px-4 py-3">
                       <div className="relative w-16 h-16 bg-gray-100 rounded">
                         {product.image_url ? (
-                          <Image
-                            src={product.image_url}
-                            alt={product.name}
-                            fill
-                            className="object-cover rounded"
+                          product.image_url.startsWith('data:') ? (
+                            <img
+                              src={product.image_url}
+                              alt={product.name}
+                              className="w-full h-full object-cover rounded"
+                            />
+                          ) : (
+                            <Image
+                              src={product.image_url}
+                              alt={product.name}
+                              fill
+                              className="object-cover rounded"
                               sizes="64px"
                               loading="lazy"
-                          />
+                            />
+                          )
                         ) : (
                           <div className="w-full h-full flex items-center justify-center text-xs text-gray-400">
                             Resim yok

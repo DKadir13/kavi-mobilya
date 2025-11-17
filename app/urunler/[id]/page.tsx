@@ -313,14 +313,22 @@ function ProductImageCarousel({ product }: { product: Product }) {
     >
       {images.length > 0 ? (
         <>
-          <Image
-            src={images[currentImageIndex]}
-            alt={`${product.name} - Resim ${currentImageIndex + 1}`}
-            fill
-            className="object-cover"
-            priority={currentImageIndex === 0}
-            sizes="(max-width: 1024px) 100vw, 50vw"
-          />
+          {images[currentImageIndex]?.startsWith('data:') ? (
+            <img
+              src={images[currentImageIndex]}
+              alt={`${product.name} - Resim ${currentImageIndex + 1}`}
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <Image
+              src={images[currentImageIndex]}
+              alt={`${product.name} - Resim ${currentImageIndex + 1}`}
+              fill
+              className="object-cover"
+              priority={currentImageIndex === 0}
+              sizes="(max-width: 1024px) 100vw, 50vw"
+            />
+          )}
           
           {/* Navigation Buttons */}
           {hasMultipleImages && (

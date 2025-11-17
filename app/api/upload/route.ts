@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { writeFile, mkdir } from 'fs/promises';
-import { join } from 'path';
-import { existsSync } from 'fs';
+import sharp from 'sharp';
 
 export async function POST(request: NextRequest) {
   try {
@@ -10,20 +8,6 @@ export async function POST(request: NextRequest) {
 
     if (!files || files.length === 0) {
       return NextResponse.json({ error: 'Dosya bulunamadı' }, { status: 400 });
-    }
-
-    const uploadDir = join(process.cwd(), 'public', 'uploads', 'products');
-    
-    // Klasör yoksa oluştur
-    try {
-      if (!existsSync(uploadDir)) {
-        await mkdir(uploadDir, { recursive: true });
-      }
-    } catch (dirError: any) {
-      console.error('Directory creation error:', dirError);
-      return NextResponse.json({ 
-        error: 'Upload klasörü oluşturulamadı: ' + dirError.message 
-      }, { status: 500 });
     }
 
     const uploadedFiles: string[] = [];
@@ -41,7 +25,7 @@ export async function POST(request: NextRequest) {
         continue;
       }
 
-      // Dosya boyutu kontrolü (max 10MB)
+      // Dosya boyutu kontrolü (max 10MB - sıkıştırma sonrası çok daha küçük olacak)
       if (file.size > 10 * 1024 * 1024) {
         errors.push(`${file.name}: Dosya boyutu çok büyük (max 10MB)`);
         continue;
@@ -51,19 +35,42 @@ export async function POST(request: NextRequest) {
         const bytes = await file.arrayBuffer();
         const buffer = Buffer.from(bytes);
 
-        // Benzersiz dosya adı oluştur
-        const timestamp = Date.now();
-        const randomString = Math.random().toString(36).substring(2, 15);
-        const extension = file.name.split('.').pop() || 'jpg';
-        const filename = `${timestamp}-${randomString}.${extension}`;
-        const filepath = join(uploadDir, filename);
+        // Resmi sıkıştır ve optimize et
+        let optimizedBuffer: Buffer;
+        let mimeType = 'image/jpeg'; // Varsayılan olarak JPEG
 
-        // Dosyayı kaydet
-        await writeFile(filepath, buffer);
+        try {
+          // Resmi optimize et:
+          // - Maksimum genişlik: 1920px (daha büyük resimler küçültülür)
+          // - Kalite: 80% (iyi kalite/küçük boyut dengesi)
+          // - Format: JPEG (en iyi sıkıştırma)
+          optimizedBuffer = await sharp(buffer)
+            .resize(1920, 1920, {
+              fit: 'inside',
+              withoutEnlargement: true, // Küçük resimleri büyütme
+            })
+            .jpeg({
+              quality: 80,
+              progressive: true, // Progressive JPEG (daha iyi yükleme deneyimi)
+              mozjpeg: true, // Daha iyi sıkıştırma
+            })
+            .toBuffer();
+
+          mimeType = 'image/jpeg';
+        } catch (sharpError: any) {
+          // Sharp ile işlenemezse (SVG gibi), orijinal buffer'ı kullan
+          console.warn(`Sharp processing failed for ${file.name}, using original:`, sharpError.message);
+          optimizedBuffer = buffer;
+          mimeType = file.type;
+        }
+
+        // Base64'e çevir
+        const base64String = optimizedBuffer.toString('base64');
         
-        // Public URL'yi oluştur
-        const publicUrl = `/uploads/products/${filename}`;
-        uploadedFiles.push(publicUrl);
+        // Data URL formatında oluştur (data:image/jpeg;base64,...)
+        const dataUrl = `data:${mimeType};base64,${base64String}`;
+        
+        uploadedFiles.push(dataUrl);
       } catch (fileError: any) {
         console.error(`File upload error for ${file.name}:`, fileError);
         errors.push(`${file.name}: ${fileError.message || 'Yükleme hatası'}`);
@@ -80,7 +87,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ 
       success: true, 
       files: uploadedFiles,
-      message: `${uploadedFiles.length} dosya başarıyla yüklendi`,
+      message: `${uploadedFiles.length} dosya başarıyla yüklendi ve sıkıştırıldı`,
       warnings: errors.length > 0 ? errors : undefined
     });
   } catch (error: any) {
@@ -94,36 +101,16 @@ export async function POST(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url);
-    const fileUrl = searchParams.get('url');
-
-    if (!fileUrl) {
-      return NextResponse.json({ error: 'Dosya URL\'si gerekli' }, { status: 400 });
-    }
-
-    // Public URL'den dosya yolunu çıkar
-    const filename = fileUrl.replace('/uploads/products/', '');
-    const filepath = join(process.cwd(), 'public', 'uploads', 'products', filename);
-
-    try {
-      // Dosyayı sil
-      const { unlink } = await import('fs/promises');
-      await unlink(filepath);
-      return NextResponse.json({ success: true, message: 'Dosya silindi' });
-    } catch (error: any) {
-      // Dosya bulunamadıysa hata verme (zaten silinmiş olabilir)
-      if (error.code === 'ENOENT') {
-        return NextResponse.json({ success: true, message: 'Dosya zaten silinmiş' });
-      }
-      console.error('File delete error:', error);
-      return NextResponse.json({ 
-        error: error.message || 'Dosya silinirken bir hata oluştu' 
-      }, { status: 500 });
-    }
+    // Base64 resimler MongoDB'de saklandığı için silme işlemi gerekmez
+    // Eğer ürün silinirse resimler de otomatik olarak silinir
+    return NextResponse.json({ 
+      success: true, 
+      message: 'Base64 resimler ürünle birlikte saklandığı için ayrı silme gerekmez' 
+    });
   } catch (error: any) {
     console.error('Delete error:', error);
     return NextResponse.json({ 
-      error: error.message || 'Dosya silinirken bir hata oluştu' 
+      error: error.message || 'İşlem sırasında bir hata oluştu' 
     }, { status: 500 });
   }
 }
