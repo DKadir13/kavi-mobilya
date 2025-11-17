@@ -92,11 +92,33 @@ export async function POST(request: NextRequest) {
     });
   } catch (error: any) {
     console.error('Upload error:', error);
+    
+    // Sharp hatası kontrolü
+    if (error.message?.includes('sharp') || error.code === 'MODULE_NOT_FOUND' || error.message?.includes('Cannot find module')) {
+      return NextResponse.json({ 
+        error: 'Resim işleme modülü yüklenemedi. Lütfen sharp paketinin kurulu olduğundan emin olun.',
+        code: 'SHARP_ERROR',
+        details: [error.message]
+      }, { status: 500 });
+    }
+    
     return NextResponse.json({ 
       error: error.message || 'Dosya yüklenirken bir hata oluştu',
       code: error.code || 'UNKNOWN_ERROR'
     }, { status: 500 });
   }
+}
+
+// OPTIONS handler for CORS
+export async function OPTIONS() {
+  return new NextResponse(null, {
+    status: 200,
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'POST, DELETE, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type',
+    },
+  });
 }
 
 export async function DELETE(request: NextRequest) {

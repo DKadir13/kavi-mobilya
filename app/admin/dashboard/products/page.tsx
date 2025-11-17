@@ -231,13 +231,27 @@ export default function ProductsManagementPage() {
         body: formDataToSend,
       });
 
-      const data = await response.json();
-
+      // Response kontrolü
       if (!response.ok) {
-        const errorMessage = data.error || 'Dosya yükleme başarısız';
-        const errorDetails = data.details ? `\n${data.details.join('\n')}` : '';
-        throw new Error(errorMessage + errorDetails);
+        let errorMessage = 'Dosya yükleme başarısız';
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.error || errorMessage;
+          const errorDetails = errorData.details ? `\n${errorData.details.join('\n')}` : '';
+          throw new Error(errorMessage + errorDetails);
+        } catch (parseError: any) {
+          // JSON parse hatası varsa status text kullan
+          throw new Error(`${errorMessage} (${response.status}: ${response.statusText})`);
+        }
       }
+
+      // Response body kontrolü
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        throw new Error('Geçersiz response formatı');
+      }
+
+      const data = await response.json();
 
       const newImages = [...formData.images, ...data.files];
       const updatedPreview = [...imagePreview, ...data.files];
