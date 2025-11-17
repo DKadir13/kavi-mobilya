@@ -145,7 +145,7 @@ export default function SalesPage() {
 
   const handleEdit = useCallback((sale: Sale) => {
     const productId =
-      typeof sale.product_id === 'object'
+      sale.product_id !== null && typeof sale.product_id === 'object'
         ? sale.product_id._id
         : sale.product_id || '';
 
@@ -439,7 +439,7 @@ export default function SalesPage() {
                 {sales.map((sale) => {
                   const saleId = sale._id || sale.id || '';
                   const product =
-                    typeof sale.product_id === 'object'
+                    sale.product_id !== null && typeof sale.product_id === 'object'
                       ? sale.product_id
                       : null;
                   const productName = product?.name || '-';
