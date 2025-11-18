@@ -45,6 +45,7 @@ type Category = {
   _id: string;
   id?: string;
   name: string;
+  slug?: string;
 };
 
 export default function ProductsManagementPage() {
@@ -134,9 +135,8 @@ export default function ProductsManagementPage() {
 
       setSubmitting(true);
 
-      try {
-        // İlk resmi image_url olarak kullan (geriye dönük uyumluluk için)
-        const mainImage = formData.images.length > 0 ? formData.images[0] : formData.image_url?.trim() || null;
+      // İlk resmi image_url olarak kullan (geriye dönük uyumluluk için)
+      const mainImage = formData.images.length > 0 ? formData.images[0] : formData.image_url?.trim() || null;
 
       const productData = {
           name: formData.name.trim(),
@@ -151,23 +151,87 @@ export default function ProductsManagementPage() {
       };
 
       if (editingProduct) {
-          await productsApi.update(editingProduct._id || editingProduct.id || '', productData);
-          toast.success('Ürün başarıyla güncellendi');
-      } else {
-          await productsApi.create(productData);
-          toast.success(`Ürün ${formData.store_type === 'premium' ? 'Kavi Premium' : 'Kavi Home'} mağazasına başarıyla eklendi`);
-      }
-
-      setDialogOpen(false);
-      resetForm();
-      loadData();
-      } catch (error: any) {
-        toast.error(error.message || 'Ürün kaydedilirken bir hata oluştu');
-      } finally {
+        // Güncelleme - Optimistic update
+        const productId = editingProduct._id || editingProduct.id || '';
+        const category = categories.find(c => (c._id || c.id) === productData.category_id);
+        
+        const optimisticProduct: Product = {
+          ...editingProduct,
+          ...productData,
+          _id: productId,
+          id: productId,
+          category_id: category ? {
+            _id: category._id || category.id || '',
+            name: category.name,
+            slug: category.slug || '',
+          } : null,
+        };
+        
+        // UI'da hemen güncelle
+        setProducts((prev) =>
+          prev.map((p) => (p._id || p.id) === productId ? optimisticProduct : p)
+        );
+        
+        setDialogOpen(false);
+        resetForm();
+        toast.success('Ürün başarıyla güncellendi');
         setSubmitting(false);
+        
+        // Arka planda API çağrısı
+        productsApi.update(productId, productData)
+          .then(() => {
+            // Başarılı olursa verileri yeniden yükle (güncel veriler için)
+            loadData();
+          })
+          .catch((error: any) => {
+            // Hata olursa rollback
+            loadData();
+            toast.error(error.message || 'Ürün güncellenirken bir hata oluştu');
+          });
+      } else {
+        // Yeni ürün ekleme - Optimistic update
+        const tempId = `temp-${Date.now()}`;
+        const category = categories.find(c => (c._id || c.id) === productData.category_id);
+        
+        const optimisticProduct: Product = {
+          _id: tempId,
+          id: tempId,
+          ...productData,
+          category_id: category ? {
+            _id: category._id || category.id || '',
+            name: category.name,
+            slug: category.slug || '',
+          } : null,
+        };
+        
+        // UI'da hemen göster
+        setProducts((prev) => [optimisticProduct, ...prev]);
+        setDialogOpen(false);
+        resetForm();
+        toast.success(`Ürün ${formData.store_type === 'premium' ? 'Kavi Premium' : 'Kavi Home'} mağazasına başarıyla eklendi`);
+        setSubmitting(false);
+        
+        // Arka planda API çağrısı
+        productsApi.create(productData)
+          .then((createdProduct) => {
+            // Başarılı olursa optimistic product'ı gerçek product ile değiştir
+            setProducts((prev) =>
+              prev.map((p) =>
+                (p._id || p.id) === tempId
+                  ? { ...createdProduct, id: createdProduct._id, _id: createdProduct._id }
+                  : p
+              )
+            );
+          })
+          .catch((error: any) => {
+            // Hata olursa rollback
+            setProducts((prev) => prev.filter((p) => (p._id || p.id) !== tempId));
+            toast.error(error.message || 'Ürün eklenirken bir hata oluştu');
+          });
+      }
     }
     },
-    [formData, editingProduct, loadData, submitting]
+    [formData, editingProduct, resetForm, categories, products, loadData]
   );
 
   const handleEdit = useCallback((product: Product) => {
@@ -198,17 +262,26 @@ export default function ProductsManagementPage() {
 
   const handleDelete = useCallback(
     async (id: string) => {
-    if (!confirm('Bu ürünü silmek istediğinizden emin misiniz?')) return;
+    if (!window.confirm('Bu ürünü silmek istediğinizden emin misiniz?')) return;
 
+    // Optimistic update - UI'dan hemen kaldır
+    const deletedProduct = products.find((p) => (p._id || p.id) === id);
+    setProducts((prev) => prev.filter((p) => (p._id || p.id) !== id));
+    toast.success('Ürün silindi');
+
+    // Arka planda API çağrısı
     try {
         await productsApi.delete(id);
-        toast.success('Ürün silindi');
-      loadData();
+        // Başarılı - zaten UI'dan kaldırıldı
       } catch (error: any) {
+        // Hata olursa rollback
+        if (deletedProduct) {
+          setProducts((prev) => [...prev, deletedProduct]);
+        }
         toast.error(error.message || 'Ürün silinirken bir hata oluştu');
     }
     },
-    [loadData]
+    [products]
   );
 
   const resetForm = useCallback(() => {
@@ -288,21 +361,24 @@ export default function ProductsManagementPage() {
   }, [formData, imagePreview]);
 
   const handleRemoveImage = useCallback(async (index: number, imageUrl: string) => {
+    // Optimistic update - UI'dan hemen kaldır
+    const newImages = formData.images.filter((_, i) => i !== index);
+    const newPreview = imagePreview.filter((_, i) => i !== index);
+    setFormData({ ...formData, images: newImages });
+    setImagePreview(newPreview);
+    
+    // Arka planda silme işlemi
     try {
-      // Eğer yüklenmiş bir dosya ise sunucudan sil
+      // Eğer yüklenmiş bir dosya ise sunucudan sil (base64 için gerekmez)
       if (imageUrl.startsWith('/uploads/')) {
         await fetch(`/api/upload?url=${encodeURIComponent(imageUrl)}`, {
           method: 'DELETE',
         });
       }
-
-      const newImages = formData.images.filter((_, i) => i !== index);
-      const newPreview = imagePreview.filter((_, i) => i !== index);
-      setFormData({ ...formData, images: newImages });
-      setImagePreview(newPreview);
-      toast.success('Resim kaldırıldı');
+      // Base64 resimler için silme işlemi gerekmez
     } catch (error: any) {
-      toast.error('Resim kaldırılırken bir hata oluştu');
+      // Hata olursa rollback (opsiyonel - base64 için gerekmez)
+      console.warn('Image delete error (non-critical):', error);
     }
   }, [formData, imagePreview]);
 

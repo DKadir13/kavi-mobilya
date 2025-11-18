@@ -197,7 +197,7 @@ export default function FeaturedProductsPage() {
     loadData();
   }, [loadData]);
 
-  // Ürün ekleme - optimistic update olmadan
+  // Ürün ekleme - optimistic update ile
   const handleAddFeatured = useCallback(async () => {
     if (submitting) return;
 
@@ -221,28 +221,45 @@ export default function FeaturedProductsPage() {
       return;
     }
 
-    setSubmitting(true);
+    // Seçilen ürünü bul
+    const selectedProduct = allProducts.find((p) => (p._id || p.id) === selectedProductId);
+    if (!selectedProduct) {
+      toast.error('Ürün bulunamadı');
+      return;
+    }
 
+    // Optimistic update - UI'da hemen ekle
+    const optimisticProduct: Product = {
+      ...selectedProduct,
+      is_featured: true,
+      featured_order: selectedOrder,
+    };
+    
+    setFeaturedProducts((prev) => [...prev, optimisticProduct].sort((a, b) => 
+      (a.featured_order || 0) - (b.featured_order || 0)
+    ));
+    
+    toast.success('Ürün öne çıkan olarak eklendi');
+    setDialogOpen(false);
+    setSelectedProductId('');
+    setSelectedOrder(1);
+    setSubmitting(false);
+
+    // Arka planda API çağrısı
     try {
       await productsApi.update(selectedProductId, {
         is_featured: true,
         featured_order: selectedOrder,
       });
-
-      toast.success('Ürün öne çıkan olarak eklendi');
-      setDialogOpen(false);
-      setSelectedProductId('');
-      setSelectedOrder(1);
-      
-      // Verileri yeniden yükle
-      await loadData();
+      // Başarılı olursa verileri yeniden yükle (güncel veriler için)
+      loadData();
     } catch (error: any) {
       console.error('Add featured error:', error);
+      // Hata olursa rollback
+      loadData();
       toast.error(error.message || 'Ürün eklenirken bir hata oluştu');
-    } finally {
-      setSubmitting(false);
     }
-  }, [selectedProductId, selectedOrder, featuredProducts, loadData, submitting]);
+  }, [selectedProductId, selectedOrder, featuredProducts, allProducts, loadData, submitting]);
 
   // Sıralama güncelleme - çakışma kontrolü ile
   const handleUpdateOrder = useCallback(
@@ -259,18 +276,44 @@ export default function FeaturedProductsPage() {
         return;
       }
       
-      setSubmitting(true);
+      // Eski sırayı sakla (rollback için)
+      const oldProduct = featuredProducts.find((p) => (p._id || p.id) === productId);
+      if (!oldProduct) {
+        toast.error('Ürün bulunamadı');
+        return;
+      }
+      const oldOrder = oldProduct.featured_order;
 
+      // Optimistic update - UI'da hemen güncelle
+      setFeaturedProducts((prev) =>
+        prev.map((p) =>
+          (p._id || p.id) === productId
+            ? { ...p, featured_order: newOrder }
+            : p
+        ).sort((a, b) => (a.featured_order || 0) - (b.featured_order || 0))
+      );
+      
+      toast.success('Sıralama güncellendi');
+
+      // Arka planda API çağrısı
       try {
         await productsApi.update(productId, { featured_order: newOrder });
-        toast.success('Sıralama güncellendi');
-        // Verileri yeniden yükle
-        await loadData();
+        // Başarılı olursa verileri yeniden yükle (güncel veriler için)
+        loadData();
       } catch (error: any) {
         console.error('Update order error:', error);
+        // Hata olursa rollback
+        if (oldProduct) {
+          setFeaturedProducts((prev) =>
+            prev.map((p) =>
+              (p._id || p.id) === productId
+                ? { ...p, featured_order: oldOrder }
+                : p
+            ).sort((a, b) => (a.featured_order || 0) - (b.featured_order || 0))
+          );
+        }
+        loadData();
         toast.error(error.message || 'Sıralama güncellenirken bir hata oluştu');
-      } finally {
-        setSubmitting(false);
       }
     },
     [featuredProducts, loadData, submitting]
@@ -297,29 +340,36 @@ export default function FeaturedProductsPage() {
         return;
       }
 
-      setSubmitting(true);
-      console.log('Removing featured product:', id);
+      // Silinecek ürünü sakla (rollback için)
+      const removedProduct = featuredProducts.find((p) => (p._id || p.id) === id);
+      
+      // Optimistic update - UI'dan hemen kaldır
+      setFeaturedProducts((prev) => prev.filter((p) => (p._id || p.id) !== id));
+      toast.success('Ürün öne çıkan ürünlerden çıkarıldı');
 
+      // Arka planda API çağrısı
       try {
-        const result = await productsApi.update(id, {
+        await productsApi.update(id, {
           is_featured: false,
           featured_order: null,
         });
-        
-        console.log('Update result:', result);
-        toast.success('Ürün öne çıkan ürünlerden çıkarıldı');
-        
-        // Verileri yeniden yükle
-        await loadData();
+        // Başarılı - zaten UI'dan kaldırıldı
+        // Verileri yeniden yükle (güncel veriler için)
+        loadData();
       } catch (error: any) {
         console.error('Remove featured error:', error);
+        // Hata olursa rollback
+        if (removedProduct) {
+          setFeaturedProducts((prev) => [...prev, removedProduct].sort((a, b) => 
+            (a.featured_order || 0) - (b.featured_order || 0)
+          ));
+        }
+        loadData();
         const errorMessage = error?.message || error?.toString() || 'Ürün çıkarılırken bir hata oluştu';
         toast.error(errorMessage);
-      } finally {
-        setSubmitting(false);
       }
     },
-    [loadData, submitting]
+    [featuredProducts, loadData, submitting]
   );
 
   // Memoized filtered products - sadece featured olmayanlar
