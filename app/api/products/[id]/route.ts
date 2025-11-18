@@ -48,10 +48,29 @@ export async function PUT(
   try {
     await connectDB();
     const body = await request.json();
+    
+    // Featured order güncellemesi için çakışma kontrolü
+    if (body.featured_order !== undefined && body.is_featured === true) {
+      // Aynı featured_order'a sahip başka bir ürün var mı kontrol et
+      const existingProduct = await Product.findOne({
+        _id: { $ne: params.id },
+        is_featured: true,
+        featured_order: body.featured_order,
+      }).lean();
+      
+      if (existingProduct) {
+        // Mevcut ürünün sırasını null yap veya başka bir sıra ver
+        await Product.findByIdAndUpdate(existingProduct._id, {
+          featured_order: null,
+        });
+      }
+    }
+    
     const product: any = await Product.findByIdAndUpdate(params.id, body, {
       new: true,
       runValidators: true,
     }).lean();
+    
     if (!product) {
       return NextResponse.json({ error: 'Ürün bulunamadı' }, { status: 404 });
     }
@@ -68,9 +87,17 @@ export async function PUT(
       }
     }
     
-    return NextResponse.json(productObj);
+    const response = NextResponse.json(productObj);
+    
+    // Cache'i invalidate et (featured products değişti)
+    response.headers.set('Cache-Control', 'no-store, must-revalidate');
+    
+    return response;
   } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error('Product update error:', error);
+    return NextResponse.json({ 
+      error: error.message || 'Ürün güncellenirken bir hata oluştu' 
+    }, { status: 500 });
   }
 }
 

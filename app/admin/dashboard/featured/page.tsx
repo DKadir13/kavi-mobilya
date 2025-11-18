@@ -145,18 +145,18 @@ export default function FeaturedProductsPage() {
   const [selectedProductId, setSelectedProductId] = useState('');
   const [selectedOrder, setSelectedOrder] = useState<number>(1);
 
-  // Optimized: Sadece gerekli alanları yükle
+  // Veri yükleme - basitleştirilmiş
   const loadData = useCallback(async () => {
     try {
       setLoading(true);
       
-      // Paralel yükleme - sadece gerekli alanlar
+      // Paralel yükleme
       const [featuredData, allData] = await Promise.all([
         productsApi.getFeatured(),
-        // Sadece aktif ve featured olmayan ürünleri yükle
         productsApi.getAll({ is_active: true }),
       ]);
 
+      // Featured products formatla
       const formattedFeatured = featuredData.map((p: any) => ({
         _id: p._id,
         id: p._id,
@@ -165,11 +165,13 @@ export default function FeaturedProductsPage() {
         store_type: p.store_type,
         price: p.price,
         is_featured: true,
-        featured_order: p.featured_order,
+        featured_order: p.featured_order || null,
       }));
 
+      // Tüm ürünleri formatla - featured olanları hariç tut
+      const featuredIds = new Set(formattedFeatured.map(p => p._id));
       const formattedAll = allData
-        .filter((p: any) => !p.is_featured) // Frontend'de filtrele
+        .filter((p: any) => !featuredIds.has(p._id))
         .map((p: any) => ({
           _id: p._id,
           id: p._id,
@@ -177,8 +179,8 @@ export default function FeaturedProductsPage() {
           image_url: p.image_url,
           store_type: p.store_type,
           price: p.price,
-          is_featured: p.is_featured || false,
-          featured_order: p.featured_order,
+          is_featured: false,
+          featured_order: null,
         }));
 
       setFeaturedProducts(formattedFeatured);
@@ -195,7 +197,7 @@ export default function FeaturedProductsPage() {
     loadData();
   }, [loadData]);
 
-  // Optimistic update ile hızlı güncelleme
+  // Ürün ekleme - optimistic update olmadan
   const handleAddFeatured = useCallback(async () => {
     if (submitting) return;
 
@@ -209,24 +211,17 @@ export default function FeaturedProductsPage() {
       return;
     }
 
-    setSubmitting(true);
-
-    // Optimistic update
-    const selectedProduct = allProducts.find(
-      (p) => (p._id || p.id) === selectedProductId
+    // Seçilen sıra numarası başka bir üründe kullanılıyor mu kontrol et
+    const orderInUse = featuredProducts.some(
+      (p) => p.featured_order === selectedOrder
     );
     
-    if (selectedProduct) {
-      const optimisticProduct: Product = {
-        ...selectedProduct,
-        is_featured: true,
-        featured_order: selectedOrder,
-      };
-      setFeaturedProducts((prev) => [...prev, optimisticProduct].sort(
-        (a, b) => (a.featured_order || 99) - (b.featured_order || 99)
-      ));
-      setAllProducts((prev) => prev.filter((p) => (p._id || p.id) !== selectedProductId));
+    if (orderInUse) {
+      toast.error(`Sıra ${selectedOrder} zaten kullanılıyor. Lütfen farklı bir sıra seçin.`);
+      return;
     }
+
+    setSubmitting(true);
 
     try {
       await productsApi.update(selectedProductId, {
@@ -239,50 +234,49 @@ export default function FeaturedProductsPage() {
       setSelectedProductId('');
       setSelectedOrder(1);
       
-      // Verileri yeniden yükle (background'da)
-      loadData();
+      // Verileri yeniden yükle
+      await loadData();
     } catch (error: any) {
-      // Rollback optimistic update
-      loadData();
+      console.error('Add featured error:', error);
       toast.error(error.message || 'Ürün eklenirken bir hata oluştu');
     } finally {
       setSubmitting(false);
     }
-  }, [selectedProductId, selectedOrder, featuredProducts.length, allProducts, loadData, submitting]);
+  }, [selectedProductId, selectedOrder, featuredProducts, loadData, submitting]);
 
-  // Optimistic update ile sıralama güncelleme
+  // Sıralama güncelleme - çakışma kontrolü ile
   const handleUpdateOrder = useCallback(
     async (productId: string, newOrder: number) => {
       if (submitting) return;
       
-      setSubmitting(true);
-      
-      // Optimistic update
-      setFeaturedProducts((prev) =>
-        prev.map((p) =>
-          (p._id || p.id) === productId
-            ? { ...p, featured_order: newOrder }
-            : p
-        ).sort((a, b) => (a.featured_order || 99) - (b.featured_order || 99))
+      // Aynı sıra numarası başka bir üründe kullanılıyor mu kontrol et
+      const orderInUse = featuredProducts.some(
+        (p) => p.featured_order === newOrder && (p._id || p.id) !== productId
       );
+      
+      if (orderInUse) {
+        toast.error(`Sıra ${newOrder} zaten kullanılıyor. Lütfen farklı bir sıra seçin.`);
+        return;
+      }
+      
+      setSubmitting(true);
 
       try {
         await productsApi.update(productId, { featured_order: newOrder });
         toast.success('Sıralama güncellendi');
-        // Background'da yeniden yükle
-        loadData();
+        // Verileri yeniden yükle
+        await loadData();
       } catch (error: any) {
-        // Rollback
-        loadData();
+        console.error('Update order error:', error);
         toast.error(error.message || 'Sıralama güncellenirken bir hata oluştu');
       } finally {
         setSubmitting(false);
       }
     },
-    [loadData, submitting]
+    [featuredProducts, loadData, submitting]
   );
 
-  // Optimistic update ile kaldırma
+  // Ürün kaldırma
   const handleRemoveFeatured = useCallback(
     async (id: string) => {
       if (submitting) return;
@@ -295,13 +289,6 @@ export default function FeaturedProductsPage() {
         return;
 
       setSubmitting(true);
-      
-      // Optimistic update
-      const removedProduct = featuredProducts.find((p) => (p._id || p.id) === id);
-      setFeaturedProducts((prev) => prev.filter((p) => (p._id || p.id) !== id));
-      if (removedProduct) {
-        setAllProducts((prev) => [...prev, { ...removedProduct, is_featured: false, featured_order: null }]);
-      }
 
       try {
         await productsApi.update(id, {
@@ -309,17 +296,16 @@ export default function FeaturedProductsPage() {
           featured_order: null,
         });
         toast.success('Ürün öne çıkan ürünlerden çıkarıldı');
-        // Background'da yeniden yükle
-        loadData();
+        // Verileri yeniden yükle
+        await loadData();
       } catch (error: any) {
-        // Rollback
-        loadData();
+        console.error('Remove featured error:', error);
         toast.error(error.message || 'Ürün çıkarılırken bir hata oluştu');
       } finally {
         setSubmitting(false);
       }
     },
-    [featuredProducts, loadData, submitting]
+    [loadData, submitting]
   );
 
   // Memoized filtered products - sadece featured olmayanlar
@@ -328,7 +314,7 @@ export default function FeaturedProductsPage() {
     [allProducts]
   );
 
-  // Memoized available orders
+  // Memoized available orders - kullanılmayan sıralar
   const availableOrders = useMemo(() => {
     const usedOrders = featuredProducts
       .map((p) => p.featured_order)
@@ -388,22 +374,29 @@ export default function FeaturedProductsPage() {
                 <Select
                   value={selectedProductId}
                   onValueChange={setSelectedProductId}
+                  disabled={submitting}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Ürün seçin" />
                   </SelectTrigger>
                   <SelectContent>
-                    {filteredProducts.map((product) => (
-                      <SelectItem
-                        key={product._id || product.id}
-                        value={product._id || product.id || ''}
-                      >
-                        {product.name} -{' '}
-                        {product.store_type === 'premium'
-                          ? 'Kavi Premium'
-                          : 'Kavi Home'}
-                      </SelectItem>
-                    ))}
+                    {filteredProducts.length === 0 ? (
+                      <div className="px-2 py-1.5 text-sm text-gray-500">
+                        Tüm ürünler zaten öne çıkan olarak işaretlenmiş
+                      </div>
+                    ) : (
+                      filteredProducts.map((product) => (
+                        <SelectItem
+                          key={product._id || product.id}
+                          value={product._id || product.id || ''}
+                        >
+                          {product.name} -{' '}
+                          {product.store_type === 'premium'
+                            ? 'Kavi Premium'
+                            : 'Kavi Home'}
+                        </SelectItem>
+                      ))
+                    )}
                   </SelectContent>
                 </Select>
               </div>
@@ -413,6 +406,7 @@ export default function FeaturedProductsPage() {
                 <Select
                   value={selectedOrder.toString()}
                   onValueChange={(value) => setSelectedOrder(parseInt(value))}
+                  disabled={submitting}
                 >
                   <SelectTrigger>
                     <SelectValue />
@@ -430,6 +424,7 @@ export default function FeaturedProductsPage() {
                   {featuredProducts
                     .map((p) => p.featured_order)
                     .filter(Boolean)
+                    .sort((a, b) => a - b)
                     .join(', ') || 'Yok'}
                 </p>
               </div>
@@ -439,7 +434,7 @@ export default function FeaturedProductsPage() {
                   type="button"
                   onClick={handleAddFeatured}
                   className="flex-1 bg-[#a42a2a] hover:bg-[#8a2222]"
-                  disabled={!selectedProductId || featuredProducts.length >= 6 || submitting}
+                  disabled={!selectedProductId || featuredProducts.length >= 6 || submitting || filteredProducts.length === 0}
                 >
                   {submitting ? (
                     <>
@@ -458,6 +453,7 @@ export default function FeaturedProductsPage() {
                     setSelectedProductId('');
                     setSelectedOrder(1);
                   }}
+                  disabled={submitting}
                 >
                   İptal
                 </Button>
