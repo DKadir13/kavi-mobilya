@@ -196,13 +196,27 @@ export default function ProductsManagementPage() {
         
         // Arka planda API çağrısı
         productsApi.update(productId, productData)
-          .then(() => {
-            // Başarılı olursa verileri yeniden yükle (güncel veriler için)
-            loadData();
+          .then((updatedProduct) => {
+            // API'den dönen güncel veriyi kullan
+            const updatedCategory = categories.find(c => (c._id || c.id) === updatedProduct.category_id);
+            const finalProduct: Product = {
+              ...updatedProduct,
+              id: updatedProduct._id,
+              category_id: updatedCategory ? {
+                _id: updatedCategory._id || updatedCategory.id || '',
+                name: updatedCategory.name,
+                slug: updatedCategory.slug || '',
+              } : null,
+            };
+            setProducts((prev) =>
+              prev.map((p) => (p._id || p.id) === productId ? finalProduct : p)
+            );
           })
           .catch((error: any) => {
             // Hata olursa rollback
-            loadData();
+            setProducts((prev) =>
+              prev.map((p) => (p._id || p.id) === productId ? editingProduct : p)
+            );
             toast.error(error.message || 'Ürün güncellenirken bir hata oluştu');
           });
       } else {
@@ -231,12 +245,22 @@ export default function ProductsManagementPage() {
         // Arka planda API çağrısı
         productsApi.create(productData)
           .then((createdProduct) => {
-            // Başarılı olursa optimistic product'ı gerçek product ile değiştir
+            // API'den dönen gerçek ürünü kullan
+            const createdCategory = categories.find(c => (c._id || c.id) === createdProduct.category_id);
+            const finalProduct: Product = {
+              ...createdProduct,
+              id: createdProduct._id,
+              _id: createdProduct._id,
+              category_id: createdCategory ? {
+                _id: createdCategory._id || createdCategory.id || '',
+                name: createdCategory.name,
+                slug: createdCategory.slug || '',
+              } : null,
+            };
+            // Optimistic product'ı gerçek product ile değiştir
             setProducts((prev) =>
               prev.map((p) =>
-                (p._id || p.id) === tempId
-                  ? { ...createdProduct, id: createdProduct._id, _id: createdProduct._id }
-                  : p
+                (p._id || p.id) === tempId ? finalProduct : p
               )
             );
           })
@@ -247,7 +271,7 @@ export default function ProductsManagementPage() {
           });
       }
     },
-    [formData, editingProduct, resetForm, categories, products, loadData]
+    [formData, editingProduct, resetForm, categories, products, submitting]
   );
 
   const handleEdit = useCallback((product: Product) => {

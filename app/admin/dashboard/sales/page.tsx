@@ -113,7 +113,6 @@ export default function SalesPage() {
 
       setSubmitting(true);
 
-    try {
       const saleData = {
         product_id: formData.product_id,
           quantity: parseInt(formData.quantity) || 1,
@@ -125,23 +124,90 @@ export default function SalesPage() {
       };
 
       if (editingSale) {
-          await salesApi.update(editingSale._id || editingSale.id || '', saleData);
+          // Optimistic update - UI'da hemen güncelle
+          const saleId = editingSale._id || editingSale.id || '';
+          const product = products.find((p) => (p._id || p.id) === saleData.product_id);
+          
+          const optimisticSale: Sale = {
+            ...editingSale,
+            ...saleData,
+            product_id: product ? {
+              _id: product._id || product.id || '',
+              name: product.name,
+              store_type: product.store_type,
+            } : saleData.product_id,
+          };
+          
+          setSales((prev) =>
+            prev.map((s) => (s._id || s.id) === saleId ? optimisticSale : s)
+          );
+          
+          setDialogOpen(false);
+          resetForm();
           toast.success('Satış başarıyla güncellendi');
+          setSubmitting(false);
+          
+          // Arka planda API çağrısı
+          salesApi.update(saleId, saleData)
+            .then((updatedSale) => {
+              // API'den dönen güncel veriyi kullan
+              const finalSale: Sale = {
+                ...updatedSale,
+                id: updatedSale._id,
+              };
+              setSales((prev) =>
+                prev.map((s) => (s._id || s.id) === saleId ? finalSale : s)
+              );
+            })
+            .catch((error: any) => {
+              // Hata olursa rollback
+              setSales((prev) =>
+                prev.map((s) => (s._id || s.id) === saleId ? editingSale : s)
+              );
+              toast.error(error.message || 'Satış güncellenirken bir hata oluştu');
+            });
       } else {
-          await salesApi.create(saleData);
+          // Optimistic update - UI'da hemen ekle
+          const tempId = `temp-${Date.now()}`;
+          const product = products.find((p) => (p._id || p.id) === saleData.product_id);
+          
+          const optimisticSale: Sale = {
+            _id: tempId,
+            id: tempId,
+            ...saleData,
+            product_id: product ? {
+              _id: product._id || product.id || '',
+              name: product.name,
+              store_type: product.store_type,
+            } : saleData.product_id,
+          };
+          
+          setSales((prev) => [...prev, optimisticSale]);
+          setDialogOpen(false);
+          resetForm();
           toast.success('Satış başarıyla eklendi');
+          setSubmitting(false);
+          
+          // Arka planda API çağrısı
+          salesApi.create(saleData)
+            .then((createdSale) => {
+              // API'den dönen gerçek satışı kullan
+              const finalSale: Sale = {
+                ...createdSale,
+                id: createdSale._id,
+              };
+              setSales((prev) =>
+                prev.map((s) => (s._id || s.id) === tempId ? finalSale : s)
+              );
+            })
+            .catch((error: any) => {
+              // Hata olursa rollback
+              setSales((prev) => prev.filter((s) => (s._id || s.id) !== tempId));
+              toast.error(error.message || 'Satış eklenirken bir hata oluştu');
+            });
       }
-
-      setDialogOpen(false);
-      resetForm();
-      loadData();
-      } catch (error: any) {
-        toast.error(error.message || 'Satış kaydedilirken bir hata oluştu');
-      } finally {
-        setSubmitting(false);
-    }
     },
-    [formData, editingSale, loadData, submitting]
+    [formData, editingSale, products, submitting]
   );
 
   const handleEdit = useCallback((sale: Sale) => {
@@ -167,15 +233,24 @@ export default function SalesPage() {
     async (id: string) => {
     if (!confirm('Bu satışı silmek istediğinizden emin misiniz?')) return;
 
+    // Optimistic update - UI'dan hemen kaldır
+    const deletedSale = sales.find((s) => (s._id || s.id) === id);
+    setSales((prev) => prev.filter((s) => (s._id || s.id) !== id));
+    toast.success('Satış silindi');
+
+    // Arka planda API çağrısı
     try {
         await salesApi.delete(id);
-        toast.success('Satış silindi');
-      loadData();
+        // Başarılı - zaten UI'dan kaldırıldı
       } catch (error: any) {
+        // Hata olursa rollback
+        if (deletedSale) {
+          setSales((prev) => [...prev, deletedSale]);
+        }
         toast.error(error.message || 'Satış silinirken bir hata oluştu');
     }
     },
-    [loadData]
+    [sales]
   );
 
   const resetForm = useCallback(() => {

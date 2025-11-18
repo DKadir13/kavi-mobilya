@@ -229,8 +229,11 @@ export default function FeaturedProductsPage() {
     }
 
     // Optimistic update - UI'da hemen ekle
+    const tempId = `temp-${Date.now()}`;
     const optimisticProduct: Product = {
       ...selectedProduct,
+      _id: tempId,
+      id: tempId,
       is_featured: true,
       featured_order: selectedOrder,
     };
@@ -238,6 +241,8 @@ export default function FeaturedProductsPage() {
     setFeaturedProducts((prev) => [...prev, optimisticProduct].sort((a, b) => 
       (a.featured_order || 0) - (b.featured_order || 0)
     ));
+    // allProducts'tan hemen kaldır
+    setAllProducts((prev) => prev.filter((p) => (p._id || p.id) !== selectedProductId));
     
     toast.success('Ürün öne çıkan olarak eklendi');
     setDialogOpen(false);
@@ -247,19 +252,31 @@ export default function FeaturedProductsPage() {
 
     // Arka planda API çağrısı
     try {
-      await productsApi.update(selectedProductId, {
+      const updatedProduct = await productsApi.update(selectedProductId, {
         is_featured: true,
         featured_order: selectedOrder,
       });
-      // Başarılı olursa verileri yeniden yükle (güncel veriler için)
-      loadData();
+      // API'den dönen güncel veriyi kullan - optimistic product'ı gerçek product ile değiştir
+      const finalProduct: Product = {
+        ...updatedProduct,
+        id: updatedProduct._id,
+        is_featured: true,
+        featured_order: selectedOrder,
+      };
+      setFeaturedProducts((prev) =>
+        prev.map((p) => (p._id || p.id) === tempId ? finalProduct : p)
+          .sort((a, b) => (a.featured_order || 0) - (b.featured_order || 0))
+      );
     } catch (error: any) {
       console.error('Add featured error:', error);
       // Hata olursa rollback
-      loadData();
+      setFeaturedProducts((prev) => prev.filter((p) => (p._id || p.id) !== tempId));
+      if (selectedProduct) {
+        setAllProducts((prev) => [...prev, selectedProduct]);
+      }
       toast.error(error.message || 'Ürün eklenirken bir hata oluştu');
     }
-  }, [selectedProductId, selectedOrder, featuredProducts, allProducts, loadData, submitting]);
+  }, [selectedProductId, selectedOrder, featuredProducts, allProducts, submitting]);
 
   // Sıralama güncelleme - çakışma kontrolü ile
   const handleUpdateOrder = useCallback(
@@ -297,9 +314,18 @@ export default function FeaturedProductsPage() {
 
       // Arka planda API çağrısı
       try {
-        await productsApi.update(productId, { featured_order: newOrder });
-        // Başarılı olursa verileri yeniden yükle (güncel veriler için)
-        loadData();
+        const updatedProduct = await productsApi.update(productId, { featured_order: newOrder });
+        // API'den dönen güncel veriyi kullan
+        const finalProduct: Product = {
+          ...updatedProduct,
+          id: updatedProduct._id,
+          featured_order: newOrder,
+        };
+        setFeaturedProducts((prev) =>
+          prev.map((p) =>
+            (p._id || p.id) === productId ? finalProduct : p
+          ).sort((a, b) => (a.featured_order || 0) - (b.featured_order || 0))
+        );
       } catch (error: any) {
         console.error('Update order error:', error);
         // Hata olursa rollback
@@ -312,11 +338,10 @@ export default function FeaturedProductsPage() {
             ).sort((a, b) => (a.featured_order || 0) - (b.featured_order || 0))
           );
         }
-        loadData();
         toast.error(error.message || 'Sıralama güncellenirken bir hata oluştu');
       }
     },
-    [featuredProducts, loadData, submitting]
+    [featuredProducts, submitting]
   );
 
   // Ürün kaldırma
@@ -349,13 +374,19 @@ export default function FeaturedProductsPage() {
 
       // Arka planda API çağrısı
       try {
-        await productsApi.update(id, {
+        const updatedProduct = await productsApi.update(id, {
           is_featured: false,
           featured_order: null,
         });
         // Başarılı - zaten UI'dan kaldırıldı
-        // Verileri yeniden yükle (güncel veriler için)
-        loadData();
+        // allProducts'a geri ekle
+        const productToAdd: Product = {
+          ...updatedProduct,
+          id: updatedProduct._id,
+          is_featured: false,
+          featured_order: null,
+        };
+        setAllProducts((prev) => [...prev, productToAdd]);
       } catch (error: any) {
         console.error('Remove featured error:', error);
         // Hata olursa rollback
@@ -364,12 +395,11 @@ export default function FeaturedProductsPage() {
             (a.featured_order || 0) - (b.featured_order || 0)
           ));
         }
-        loadData();
         const errorMessage = error?.message || error?.toString() || 'Ürün çıkarılırken bir hata oluştu';
         toast.error(errorMessage);
       }
     },
-    [featuredProducts, loadData, submitting]
+    [featuredProducts, allProducts, submitting]
   );
 
   // Memoized filtered products - sadece featured olmayanlar

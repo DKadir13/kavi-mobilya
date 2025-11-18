@@ -85,7 +85,6 @@ export default function CategoriesPage() {
 
       setSubmitting(true);
 
-    try {
       // Slug kontrolü - boşsa otomatik oluştur
       const slug = formData.slug.trim() || generateSlug(formData.name);
       
@@ -97,28 +96,76 @@ export default function CategoriesPage() {
       };
 
       if (editingCategory) {
-          await categoriesApi.update(
-            editingCategory._id || editingCategory.id || '',
-            categoryData
+          // Optimistic update - UI'da hemen güncelle
+          const categoryId = editingCategory._id || editingCategory.id || '';
+          const optimisticCategory: Category = {
+            ...editingCategory,
+            ...categoryData,
+          };
+          
+          setCategories((prev) =>
+            prev.map((c) => (c._id || c.id) === categoryId ? optimisticCategory : c)
           );
+          
+          setDialogOpen(false);
+          resetForm();
           toast.success('Kategori başarıyla güncellendi');
+          setSubmitting(false);
+          
+          // Arka planda API çağrısı
+          categoriesApi.update(categoryId, categoryData)
+            .then((updatedCategory) => {
+              // API'den dönen güncel veriyi kullan
+              const finalCategory: Category = {
+                ...updatedCategory,
+                id: updatedCategory._id,
+              };
+              setCategories((prev) =>
+                prev.map((c) => (c._id || c.id) === categoryId ? finalCategory : c)
+              );
+            })
+            .catch((error: any) => {
+              // Hata olursa rollback
+              setCategories((prev) =>
+                prev.map((c) => (c._id || c.id) === categoryId ? editingCategory : c)
+              );
+              toast.error(error.message || 'Kategori güncellenirken bir hata oluştu');
+            });
       } else {
-          await categoriesApi.create(categoryData);
+          // Optimistic update - UI'da hemen ekle
+          const tempId = `temp-${Date.now()}`;
+          const optimisticCategory: Category = {
+            _id: tempId,
+            id: tempId,
+            ...categoryData,
+          };
+          
+          setCategories((prev) => [...prev, optimisticCategory]);
+          setDialogOpen(false);
+          resetForm();
           toast.success('Kategori başarıyla eklendi');
+          setSubmitting(false);
+          
+          // Arka planda API çağrısı
+          categoriesApi.create(categoryData)
+            .then((createdCategory) => {
+              // API'den dönen gerçek kategoriyi kullan
+              const finalCategory: Category = {
+                ...createdCategory,
+                id: createdCategory._id,
+              };
+              setCategories((prev) =>
+                prev.map((c) => (c._id || c.id) === tempId ? finalCategory : c)
+              );
+            })
+            .catch((error: any) => {
+              // Hata olursa rollback
+              setCategories((prev) => prev.filter((c) => (c._id || c.id) !== tempId));
+              toast.error(error.message || 'Kategori eklenirken bir hata oluştu');
+            });
       }
-
-      setDialogOpen(false);
-      resetForm();
-      await loadCategories();
-      } catch (error: any) {
-        console.error('Category save error:', error);
-        const errorMessage = error.message || 'Kategori kaydedilirken bir hata oluştu';
-        toast.error(errorMessage);
-      } finally {
-        setSubmitting(false);
-    }
     },
-    [formData, editingCategory, loadCategories, submitting, generateSlug]
+    [formData, editingCategory, submitting, generateSlug]
   );
 
   const handleEdit = useCallback((category: Category) => {
@@ -136,15 +183,24 @@ export default function CategoriesPage() {
     async (id: string) => {
     if (!confirm('Bu kategoriyi silmek istediğinizden emin misiniz?')) return;
 
+    // Optimistic update - UI'dan hemen kaldır
+    const deletedCategory = categories.find((c) => (c._id || c.id) === id);
+    setCategories((prev) => prev.filter((c) => (c._id || c.id) !== id));
+    toast.success('Kategori başarıyla silindi');
+
+    // Arka planda API çağrısı
     try {
         await categoriesApi.delete(id);
-        toast.success('Kategori başarıyla silindi');
-      loadCategories();
+        // Başarılı - zaten UI'dan kaldırıldı
       } catch (error: any) {
+        // Hata olursa rollback
+        if (deletedCategory) {
+          setCategories((prev) => [...prev, deletedCategory]);
+        }
         toast.error(error.message || 'Kategori silinirken bir hata oluştu');
     }
     },
-    [loadCategories]
+    [categories]
   );
 
   const resetForm = useCallback(() => {
