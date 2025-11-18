@@ -116,6 +116,23 @@ export default function ProductsManagementPage() {
     loadData();
   }, [loadData]);
 
+  const resetForm = useCallback(() => {
+    setFormData({
+      name: '',
+      description: '',
+      price: '',
+      image_url: '',
+      images: [],
+      store_type: 'home',
+      category_id: 'none',
+      is_featured: false,
+      is_active: true,
+    });
+    setImagePreview([]);
+    setEditingProduct(null);
+    setSubmitting(false);
+  }, []);
+
   const handleSubmit = useCallback(
     async (e: React.FormEvent) => {
     e.preventDefault();
@@ -282,23 +299,6 @@ export default function ProductsManagementPage() {
     },
     [products]
   );
-
-  const resetForm = useCallback(() => {
-    setFormData({
-      name: '',
-      description: '',
-      price: '',
-      image_url: '',
-      images: [],
-      store_type: 'home',
-      category_id: 'none',
-      is_featured: false,
-      is_active: true,
-    });
-    setImagePreview([]);
-    setEditingProduct(null);
-    setSubmitting(false);
-  }, []);
 
   const handleImageUpload = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
