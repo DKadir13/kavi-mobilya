@@ -229,7 +229,6 @@ export default function ProductsManagementPage() {
             toast.error(error.message || 'Ürün eklenirken bir hata oluştu');
           });
       }
-    }
     },
     [formData, editingProduct, resetForm, categories, products, loadData]
   );
