@@ -7,7 +7,7 @@ export async function GET() {
   try {
     await connectDB();
     const products: any[] = await Product.find({ is_featured: true, is_active: true })
-      .select('name image_url store_type price category_id featured_order')
+      .select('name image_url images store_type price category_id featured_order')
       .sort({ featured_order: 1 })
       .limit(6)
       .lean();

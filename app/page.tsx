@@ -21,6 +21,8 @@ type Product = {
   image_url: string | null;
   store_type: 'home' | 'premium';
   price: number | null;
+  featured_order?: number | null;
+  images?: string[];
 };
 
 export default function Home() {
@@ -74,12 +76,20 @@ export default function Home() {
   const loadFeaturedProducts = async () => {
     try {
       const data = await productsApi.getFeatured();
-      const formattedData = data.map((product: any) => ({
-        ...product,
-        id: product._id,
-      }));
+      const formattedData = data
+        .map((product: any) => ({
+          ...product,
+          id: product._id,
+        }))
+        // featured_order'a göre sırala (1'den 6'ya kadar)
+        .sort((a: Product, b: Product) => {
+          const orderA = a.featured_order ?? 999;
+          const orderB = b.featured_order ?? 999;
+          return orderA - orderB;
+        });
       setFeaturedProducts(formattedData);
     } catch (error) {
+      console.error('Featured products load error:', error);
       // Silent fail - empty state will show
     }
   };
@@ -293,60 +303,76 @@ export default function Home() {
 
           {featuredProducts.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {featuredProducts.map((product, index) => (
-                <Link
-                  key={product._id}
-                  href={`/urunler/${product._id}`}
-                  className={`group bg-white rounded-xl overflow-hidden shadow-md hover:shadow-xl transition-all scroll-reveal ${
-                    index === 0 ? '' : index === 1 ? 'scroll-reveal-delay-1' : 'scroll-reveal-delay-2'
-                  }`}
-                >
-                  <div className="relative h-64 bg-gray-100">
-                    {product.image_url ? (
-                      product.image_url.startsWith('data:') ? (
-                        <img
-                          src={product.image_url}
-                          alt={product.name}
-                          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
-                        />
+              {featuredProducts.map((product, index) => {
+                // İlk resmi kullan (image_url veya images array'inden)
+                const displayImage = product.images && product.images.length > 0 
+                  ? product.images[0] 
+                  : product.image_url;
+                
+                return (
+                  <Link
+                    key={product._id}
+                    href={`/urunler/${product._id}`}
+                    className={`group bg-white rounded-xl overflow-hidden shadow-md hover:shadow-xl transition-all scroll-reveal ${
+                      index === 0 ? '' : index === 1 ? 'scroll-reveal-delay-1' : 'scroll-reveal-delay-2'
+                    }`}
+                  >
+                    <div className="relative h-64 bg-gray-100">
+                      {displayImage ? (
+                        displayImage.startsWith('data:') ? (
+                          <img
+                            src={displayImage}
+                            alt={product.name}
+                            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                          />
+                        ) : (
+                          <Image
+                            src={displayImage}
+                            alt={product.name}
+                            fill
+                            className="object-cover group-hover:scale-110 transition-transform duration-300"
+                            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                            loading="lazy"
+                          />
+                        )
                       ) : (
-                        <Image
-                          src={product.image_url}
-                          alt={product.name}
-                          fill
-                          className="object-cover group-hover:scale-110 transition-transform duration-300"
-                          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                          loading="lazy"
-                        />
-                      )
-                    ) : (
-                      <div className="h-full flex items-center justify-center text-gray-400">
-                        Resim yok
-                      </div>
-                    )}
-                  </div>
-                  <div className="p-4">
-                    <h3 className="font-semibold text-lg mb-2 line-clamp-2">
-                      {product.name}
-                    </h3>
-                    <p className="text-sm text-gray-500 mb-2">
-                      {product.store_type === 'premium'
-                        ? 'Kavi Premium'
-                        : 'Kavi Home'}
-                    </p>
-                    {product.price && (
-                      <p className="text-[#a42a2a] font-bold">
-                        {product.price.toLocaleString('tr-TR')} TL
+                        <div className="h-full flex items-center justify-center text-gray-400">
+                          Resim yok
+                        </div>
+                      )}
+                      {/* Sıra numarası badge (opsiyonel) */}
+                      {product.featured_order && (
+                        <div className="absolute top-2 left-2 bg-[#a42a2a] text-white text-xs font-bold px-2 py-1 rounded-full">
+                          #{product.featured_order}
+                        </div>
+                      )}
+                    </div>
+                    <div className="p-4">
+                      <h3 className="font-semibold text-lg mb-2 line-clamp-2">
+                        {product.name}
+                      </h3>
+                      <p className="text-sm text-gray-500 mb-2">
+                        {product.store_type === 'premium'
+                          ? 'Kavi Premium'
+                          : 'Kavi Home'}
                       </p>
-                    )}
-                  </div>
-                </Link>
-              ))}
+                      {product.price && (
+                        <p className="text-[#a42a2a] font-bold">
+                          {product.price.toLocaleString('tr-TR')} TL
+                        </p>
+                      )}
+                    </div>
+                  </Link>
+                );
+              })}
             </div>
           ) : (
             <div className="text-center py-12">
               <p className="text-gray-500 text-lg">
                 Henüz öne çıkan ürün eklenmemiş.
+              </p>
+              <p className="text-gray-400 text-sm mt-2">
+                Yönetim panelinden öne çıkan ürün ekleyebilirsiniz.
               </p>
             </div>
           )}
