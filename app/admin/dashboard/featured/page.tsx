@@ -228,6 +228,8 @@ export default function FeaturedProductsPage() {
       return;
     }
 
+    setSubmitting(true);
+
     // Optimistic update - UI'da hemen ekle
     const tempId = `temp-${Date.now()}`;
     const optimisticProduct: Product = {
@@ -248,7 +250,6 @@ export default function FeaturedProductsPage() {
     setDialogOpen(false);
     setSelectedProductId('');
     setSelectedOrder(1);
-    setSubmitting(false);
 
     // Arka planda API çağrısı
     try {
@@ -260,6 +261,7 @@ export default function FeaturedProductsPage() {
       const finalProduct: Product = {
         ...updatedProduct,
         id: updatedProduct._id,
+        _id: updatedProduct._id,
         is_featured: true,
         featured_order: selectedOrder,
       };
@@ -271,10 +273,10 @@ export default function FeaturedProductsPage() {
       console.error('Add featured error:', error);
       // Hata olursa rollback
       setFeaturedProducts((prev) => prev.filter((p) => (p._id || p.id) !== tempId));
-      if (selectedProduct) {
-        setAllProducts((prev) => [...prev, selectedProduct]);
-      }
+      setAllProducts((prev) => [...prev, selectedProduct]);
       toast.error(error.message || 'Ürün eklenirken bir hata oluştu');
+    } finally {
+      setSubmitting(false);
     }
   }, [selectedProductId, selectedOrder, featuredProducts, allProducts, submitting]);
 
@@ -301,6 +303,8 @@ export default function FeaturedProductsPage() {
       }
       const oldOrder = oldProduct.featured_order;
 
+      setSubmitting(true);
+
       // Optimistic update - UI'da hemen güncelle
       setFeaturedProducts((prev) =>
         prev.map((p) =>
@@ -319,6 +323,7 @@ export default function FeaturedProductsPage() {
         const finalProduct: Product = {
           ...updatedProduct,
           id: updatedProduct._id,
+          _id: updatedProduct._id,
           featured_order: newOrder,
         };
         setFeaturedProducts((prev) =>
@@ -329,16 +334,16 @@ export default function FeaturedProductsPage() {
       } catch (error: any) {
         console.error('Update order error:', error);
         // Hata olursa rollback
-        if (oldProduct) {
-          setFeaturedProducts((prev) =>
-            prev.map((p) =>
-              (p._id || p.id) === productId
-                ? { ...p, featured_order: oldOrder }
-                : p
-            ).sort((a, b) => (a.featured_order || 0) - (b.featured_order || 0))
-          );
-        }
+        setFeaturedProducts((prev) =>
+          prev.map((p) =>
+            (p._id || p.id) === productId
+              ? { ...p, featured_order: oldOrder }
+              : p
+          ).sort((a, b) => (a.featured_order || 0) - (b.featured_order || 0))
+        );
         toast.error(error.message || 'Sıralama güncellenirken bir hata oluştu');
+      } finally {
+        setSubmitting(false);
       }
     },
     [featuredProducts, submitting]
@@ -348,7 +353,6 @@ export default function FeaturedProductsPage() {
   const handleRemoveFeatured = useCallback(
     async (id: string) => {
       if (submitting) {
-        console.log('Already submitting, skipping...');
         return;
       }
 
@@ -368,6 +372,13 @@ export default function FeaturedProductsPage() {
       // Silinecek ürünü sakla (rollback için)
       const removedProduct = featuredProducts.find((p) => (p._id || p.id) === id);
       
+      if (!removedProduct) {
+        toast.error('Ürün bulunamadı');
+        return;
+      }
+
+      setSubmitting(true);
+
       // Optimistic update - UI'dan hemen kaldır
       setFeaturedProducts((prev) => prev.filter((p) => (p._id || p.id) !== id));
       toast.success('Ürün öne çıkan ürünlerden çıkarıldı');
@@ -383,6 +394,7 @@ export default function FeaturedProductsPage() {
         const productToAdd: Product = {
           ...updatedProduct,
           id: updatedProduct._id,
+          _id: updatedProduct._id,
           is_featured: false,
           featured_order: null,
         };
@@ -390,13 +402,13 @@ export default function FeaturedProductsPage() {
       } catch (error: any) {
         console.error('Remove featured error:', error);
         // Hata olursa rollback
-        if (removedProduct) {
-          setFeaturedProducts((prev) => [...prev, removedProduct].sort((a, b) => 
-            (a.featured_order || 0) - (b.featured_order || 0)
-          ));
-        }
+        setFeaturedProducts((prev) => [...prev, removedProduct].sort((a, b) => 
+          (a.featured_order || 0) - (b.featured_order || 0)
+        ));
         const errorMessage = error?.message || error?.toString() || 'Ürün çıkarılırken bir hata oluştu';
         toast.error(errorMessage);
+      } finally {
+        setSubmitting(false);
       }
     },
     [featuredProducts, allProducts, submitting]
