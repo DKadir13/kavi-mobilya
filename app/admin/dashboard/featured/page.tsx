@@ -423,7 +423,7 @@ export default function FeaturedProductsPage() {
                   Mevcut sıralamalar:{' '}
                   {featuredProducts
                     .map((p) => p.featured_order)
-                    .filter(Boolean)
+                    .filter((order): order is number => order !== null && order !== undefined)
                     .sort((a, b) => a - b)
                     .join(', ') || 'Yok'}
                 </p>
