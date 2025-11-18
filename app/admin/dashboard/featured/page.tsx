@@ -279,28 +279,42 @@ export default function FeaturedProductsPage() {
   // Ürün kaldırma
   const handleRemoveFeatured = useCallback(
     async (id: string) => {
-      if (submitting) return;
-
-      if (
-        !confirm(
-          'Bu ürünü öne çıkan ürünlerden çıkarmak istediğinizden emin misiniz?'
-        )
-      )
+      if (submitting) {
+        console.log('Already submitting, skipping...');
         return;
+      }
+
+      if (!id) {
+        toast.error('Ürün ID bulunamadı');
+        return;
+      }
+
+      const confirmed = window.confirm(
+        'Bu ürünü öne çıkan ürünlerden çıkarmak istediğinizden emin misiniz?'
+      );
+      
+      if (!confirmed) {
+        return;
+      }
 
       setSubmitting(true);
+      console.log('Removing featured product:', id);
 
       try {
-        await productsApi.update(id, {
+        const result = await productsApi.update(id, {
           is_featured: false,
           featured_order: null,
         });
+        
+        console.log('Update result:', result);
         toast.success('Ürün öne çıkan ürünlerden çıkarıldı');
+        
         // Verileri yeniden yükle
         await loadData();
       } catch (error: any) {
         console.error('Remove featured error:', error);
-        toast.error(error.message || 'Ürün çıkarılırken bir hata oluştu');
+        const errorMessage = error?.message || error?.toString() || 'Ürün çıkarılırken bir hata oluştu';
+        toast.error(errorMessage);
       } finally {
         setSubmitting(false);
       }

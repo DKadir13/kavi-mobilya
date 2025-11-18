@@ -49,6 +49,8 @@ export async function PUT(
     await connectDB();
     const body = await request.json();
     
+    console.log('Product update request:', { id: params.id, body });
+    
     // Featured order güncellemesi için çakışma kontrolü
     if (body.featured_order !== undefined && body.is_featured === true) {
       // Aynı featured_order'a sahip başka bir ürün var mı kontrol et
@@ -59,21 +61,32 @@ export async function PUT(
       }).lean();
       
       if (existingProduct) {
-        // Mevcut ürünün sırasını null yap veya başka bir sıra ver
+        // Mevcut ürünün sırasını null yap
         await Product.findByIdAndUpdate(existingProduct._id, {
           featured_order: null,
         });
       }
     }
     
-    const product: any = await Product.findByIdAndUpdate(params.id, body, {
-      new: true,
-      runValidators: true,
-    }).lean();
+    // is_featured false yapılıyorsa featured_order'ı da null yap
+    if (body.is_featured === false) {
+      body.featured_order = null;
+    }
+    
+    const product: any = await Product.findByIdAndUpdate(
+      params.id,
+      { ...body, updated_at: new Date() },
+      {
+        new: true,
+        runValidators: true,
+      }
+    ).lean();
     
     if (!product) {
       return NextResponse.json({ error: 'Ürün bulunamadı' }, { status: 404 });
     }
+    
+    console.log('Product updated successfully:', product._id);
     
     const productObj: any = { ...product };
     if (product.category_id) {
@@ -96,7 +109,8 @@ export async function PUT(
   } catch (error: any) {
     console.error('Product update error:', error);
     return NextResponse.json({ 
-      error: error.message || 'Ürün güncellenirken bir hata oluştu' 
+      error: error.message || 'Ürün güncellenirken bir hata oluştu',
+      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
     }, { status: 500 });
   }
 }
