@@ -65,7 +65,7 @@ export async function PUT(
 
       // Store type güncelle
       if (!body.store_type) {
-        const uniqueStoreTypes = [...new Set(products.map((p: any) => p.store_type))];
+        const uniqueStoreTypes = Array.from(new Set(products.map((p: any) => p.store_type)));
         body.store_type = uniqueStoreTypes.length === 1 ? uniqueStoreTypes[0] : 'both';
       }
 

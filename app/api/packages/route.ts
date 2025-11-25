@@ -121,7 +121,7 @@ export async function POST(request: NextRequest) {
     // Store type belirle (eğer belirtilmediyse)
     let storeType = body.store_type || 'both';
     if (storeType === 'both' || !storeType) {
-      const uniqueStoreTypes = [...new Set(products.map((p: any) => p.store_type))];
+      const uniqueStoreTypes = Array.from(new Set(products.map((p: any) => p.store_type)));
       if (uniqueStoreTypes.length === 1) {
         storeType = uniqueStoreTypes[0];
       } else {
