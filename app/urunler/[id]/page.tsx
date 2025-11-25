@@ -3,11 +3,23 @@
 import { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { productsApi } from '@/lib/api';
-import { useCart } from '@/contexts/CartContext';
+import { useCart, type PackageItem } from '@/contexts/CartContext';
 import { Button } from '@/components/ui/button';
-import { ShoppingCart, ArrowLeft, MessageCircle, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogFooter,
+} from '@/components/ui/dialog';
+import { ShoppingCart, ArrowLeft, MessageCircle, ChevronLeft, ChevronRight, Package, Plus, X, Search } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { toast } from 'sonner';
 
 type Product = {
   _id: string;
@@ -30,13 +42,28 @@ export default function ProductDetailPage() {
   const router = useRouter();
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
-  const { addToCart } = useCart();
+  const { addToCart, addPackageToCart } = useCart();
+  const [packageDialogOpen, setPackageDialogOpen] = useState(false);
+  const [packageName, setPackageName] = useState('');
+  const [selectedPackageItems, setSelectedPackageItems] = useState<PackageItem[]>([]);
+  const [allProducts, setAllProducts] = useState<Product[]>([]);
+  const [packageSearchQuery, setPackageSearchQuery] = useState('');
 
   useEffect(() => {
     if (params.id) {
       loadProduct(params.id as string);
     }
+    loadAllProducts();
   }, [params.id]);
+
+  const loadAllProducts = async () => {
+    try {
+      const data = await productsApi.getAll({ is_active: true });
+      setAllProducts(data);
+    } catch (error) {
+      console.error('Products load error:', error);
+    }
+  };
 
   const loadProduct = async (id: string) => {
     try {
@@ -88,6 +115,65 @@ export default function ProductDetailPage() {
     );
     window.open(`https://wa.me/${phone}?text=${message}`, '_blank');
   }, [product]);
+
+  const handleAddToPackage = useCallback((productToAdd: Product) => {
+    if (selectedPackageItems.find((item) => item.id === productToAdd._id)) {
+      toast.info('Bu ürün pakete zaten eklenmiş');
+      return;
+    }
+
+    const categoryName = productToAdd.category_id !== null && typeof productToAdd.category_id === 'object' 
+      ? productToAdd.category_id?.name 
+      : null;
+
+    const packageItem: PackageItem = {
+      id: productToAdd._id || productToAdd.id || '',
+      name: productToAdd.name,
+      price: productToAdd.price,
+      image_url: productToAdd.image_url,
+      category: categoryName || 'Diğer',
+      store_type: productToAdd.store_type,
+    };
+
+    setSelectedPackageItems((prev) => [...prev, packageItem]);
+    toast.success(`${productToAdd.name} pakete eklendi`);
+  }, [selectedPackageItems]);
+
+  const handleRemoveFromPackage = useCallback((itemId: string) => {
+    setSelectedPackageItems((prev) => {
+      const removed = prev.find((item) => item.id === itemId);
+      if (removed) {
+        toast.success(`${removed.name} paketten kaldırıldı`);
+      }
+      return prev.filter((item) => item.id !== itemId);
+    });
+  }, []);
+
+  const handleCreatePackage = useCallback(() => {
+    if (!packageName.trim()) {
+      toast.error('Lütfen paket adı girin');
+      return;
+    }
+
+    if (selectedPackageItems.length === 0) {
+      toast.error('Pakete en az bir ürün eklemelisiniz');
+      return;
+    }
+
+    addPackageToCart(packageName.trim(), selectedPackageItems);
+    setPackageDialogOpen(false);
+    setPackageName('');
+    setSelectedPackageItems([]);
+    setPackageSearchQuery('');
+  }, [packageName, selectedPackageItems, addPackageToCart]);
+
+  const filteredProductsForPackage = useMemo(() => {
+    if (!packageSearchQuery) return allProducts;
+    const query = packageSearchQuery.toLowerCase();
+    return allProducts.filter((p) =>
+      p.name.toLowerCase().includes(query)
+    );
+  }, [allProducts, packageSearchQuery]);
 
   if (loading) {
     return (
@@ -176,6 +262,181 @@ export default function ProductDetailPage() {
                 <ShoppingCart className="h-5 w-5 mr-3" />
                 Sepete Ekle
               </Button>
+
+              <Dialog open={packageDialogOpen} onOpenChange={setPackageDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button
+                    size="lg"
+                    variant="outline"
+                    className="w-full text-lg py-6 border-blue-600 text-blue-600 hover:bg-blue-600 hover:text-white"
+                  >
+                    <Package className="h-5 w-5 mr-3" />
+                    Paket Oluştur
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+                  <DialogHeader>
+                    <DialogTitle>Paket Oluştur</DialogTitle>
+                    <DialogDescription>
+                      Birden fazla ürünü birleştirerek özel paket oluşturun
+                    </DialogDescription>
+                  </DialogHeader>
+
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="packageName">Paket Adı *</Label>
+                      <Input
+                        id="packageName"
+                        placeholder="Örn: Oturma Odası Paketi"
+                        value={packageName}
+                        onChange={(e) => setPackageName(e.target.value)}
+                      />
+                    </div>
+
+                    {/* Seçili ürünler */}
+                    {selectedPackageItems.length > 0 && (
+                      <div className="space-y-2">
+                        <Label>Pakete Eklenen Ürünler ({selectedPackageItems.length})</Label>
+                        <div className="space-y-2 max-h-40 overflow-y-auto border rounded-lg p-3 bg-gray-50">
+                          {selectedPackageItems.map((item) => (
+                            <div
+                              key={item.id}
+                              className="flex items-center gap-3 p-2 bg-white rounded border"
+                            >
+                              <div className="relative w-12 h-12 flex-shrink-0 bg-gray-100 rounded overflow-hidden">
+                                {item.image_url ? (
+                                  <Image
+                                    src={item.image_url}
+                                    alt={item.name}
+                                    fill
+                                    className="object-cover"
+                                    sizes="48px"
+                                  />
+                                ) : (
+                                  <div className="w-full h-full flex items-center justify-center text-gray-400 text-xs">
+                                    -
+                                  </div>
+                                )}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-medium line-clamp-1">{item.name}</p>
+                                {item.price && (
+                                  <p className="text-xs text-gray-600">
+                                    {item.price.toLocaleString('tr-TR')} TL
+                                  </p>
+                                )}
+                              </div>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-50"
+                                onClick={() => handleRemoveFromPackage(item.id)}
+                              >
+                                <X className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Ürün arama ve listesi */}
+                    <div className="space-y-2">
+                      <Label>Ürün Ara ve Ekle</Label>
+                      <div className="relative">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                        <Input
+                          placeholder="Ürün ara..."
+                          value={packageSearchQuery}
+                          onChange={(e) => setPackageSearchQuery(e.target.value)}
+                          className="pl-10"
+                        />
+                      </div>
+                      <div className="border rounded-lg p-3 max-h-60 overflow-y-auto space-y-2">
+                        {filteredProductsForPackage.length === 0 ? (
+                          <p className="text-sm text-gray-500 text-center py-4">
+                            Ürün bulunamadı
+                          </p>
+                        ) : (
+                          filteredProductsForPackage
+                            .filter((p) => !selectedPackageItems.find((item) => item.id === p._id))
+                            .map((p) => {
+                              const categoryName = p.category_id !== null && typeof p.category_id === 'object' 
+                                ? p.category_id?.name 
+                                : null;
+                              
+                              return (
+                                <div
+                                  key={p._id}
+                                  className="flex items-center gap-3 p-2 hover:bg-gray-50 rounded cursor-pointer border border-transparent hover:border-gray-200"
+                                  onClick={() => handleAddToPackage(p)}
+                                >
+                                  <div className="relative w-12 h-12 flex-shrink-0 bg-gray-100 rounded overflow-hidden">
+                                    {p.image_url ? (
+                                      <Image
+                                        src={p.image_url}
+                                        alt={p.name}
+                                        fill
+                                        className="object-cover"
+                                        sizes="48px"
+                                      />
+                                    ) : (
+                                      <div className="w-full h-full flex items-center justify-center text-gray-400 text-xs">
+                                        -
+                                      </div>
+                                    )}
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-sm font-medium line-clamp-1">{p.name}</p>
+                                    <p className="text-xs text-gray-500">{categoryName || 'Diğer'}</p>
+                                    {p.price && (
+                                      <p className="text-xs text-[#a42a2a] font-medium">
+                                        {p.price.toLocaleString('tr-TR')} TL
+                                      </p>
+                                    )}
+                                  </div>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleAddToPackage(p);
+                                    }}
+                                  >
+                                    <Plus className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                              );
+                            })
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  <DialogFooter>
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setPackageDialogOpen(false);
+                        setPackageName('');
+                        setSelectedPackageItems([]);
+                        setPackageSearchQuery('');
+                      }}
+                    >
+                      İptal
+                    </Button>
+                    <Button
+                      onClick={handleCreatePackage}
+                      disabled={!packageName.trim() || selectedPackageItems.length === 0}
+                      className="bg-blue-600 hover:bg-blue-700"
+                    >
+                      <Package className="h-4 w-4 mr-2" />
+                      Paketi Sepete Ekle
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
 
               <Button
                 onClick={handleWhatsAppContact}

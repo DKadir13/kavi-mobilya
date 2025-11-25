@@ -194,7 +194,7 @@ export default function ProductsManagementPage() {
         toast.success('Ürün başarıyla güncellendi');
         setSubmitting(false);
         
-        // Arka planda API çağrısı
+        // Arka planda API çağrısı - promise'ı await etmeden
         productsApi.update(productId, productData)
           .then((updatedProduct) => {
             // API'den dönen güncel veriyi kullan
@@ -309,17 +309,15 @@ export default function ProductsManagementPage() {
     setProducts((prev) => prev.filter((p) => (p._id || p.id) !== id));
     toast.success('Ürün silindi');
 
-    // Arka planda API çağrısı
-    try {
-        await productsApi.delete(id);
-        // Başarılı - zaten UI'dan kaldırıldı
-      } catch (error: any) {
+    // Arka planda API çağrısı - await etmeden
+    productsApi.delete(id)
+      .catch((error: any) => {
         // Hata olursa rollback
         if (deletedProduct) {
           setProducts((prev) => [...prev, deletedProduct]);
         }
         toast.error(error.message || 'Ürün silinirken bir hata oluştu');
-    }
+      });
     },
     [products]
   );

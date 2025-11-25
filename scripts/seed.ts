@@ -42,10 +42,20 @@ async function seedDatabase() {
     });
     console.log(`Admin kullanıcı eklendi: ${adminUser2.email}`);
 
+    // Üçüncü admin kullanıcı: kadir / Kadir.3327
+    const hashedPassword3 = await bcrypt.hash('Kadir.3327', 10);
+    const adminUser3 = await AdminUser.create({
+      email: 'kadir',
+      password: hashedPassword3,
+      full_name: 'Kadir Admin',
+      role: 'admin',
+    });
+    console.log(`Admin kullanıcı eklendi: ${adminUser3.email}`);
+
     console.log('\n✅ Veritabanı seed işlemi tamamlandı!');
     console.log('\n📊 Özet:');
     console.log('- Test verileri temizlendi');
-    console.log('- 2 admin kullanıcı eklendi');
+    console.log('- 3 admin kullanıcı eklendi');
     console.log('\n🔐 Admin Giriş Bilgileri:');
     console.log('Kullanıcı 1:');
     console.log('  Email: nyc0606');
@@ -53,6 +63,9 @@ async function seedDatabase() {
     console.log('\nKullanıcı 2:');
     console.log('  Email: ibo123');
     console.log('  Şifre: 1453ibo.');
+    console.log('\nKullanıcı 3:');
+    console.log('  Email: kadir');
+    console.log('  Şifre: Kadir.3327');
 
     process.exit(0);
   } catch (error) {

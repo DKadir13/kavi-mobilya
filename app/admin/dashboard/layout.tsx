@@ -13,6 +13,7 @@ import {
   Menu,
   X,
   Star,
+  Boxes,
 } from 'lucide-react';
 
 export default function AdminLayout({
@@ -111,6 +112,11 @@ export default function AdminLayout({
       href: '/admin/dashboard/products',
       label: 'Ürünler',
       icon: Package,
+    },
+    {
+      href: '/admin/dashboard/packages',
+      label: 'Paketler',
+      icon: Boxes,
     },
     {
       href: '/admin/dashboard/categories',

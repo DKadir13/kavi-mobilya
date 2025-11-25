@@ -19,7 +19,7 @@ export async function GET(
     const productObj: any = { ...product };
     if (product.category_id) {
       const category: any = await Category.findById(product.category_id)
-        .select('name slug')
+        .select('_id name slug')
         .lean();
       if (category) {
         productObj.category_id = {
@@ -49,8 +49,6 @@ export async function PUT(
     await connectDB();
     const body = await request.json();
     
-    console.log('Product update request:', { id: params.id, body });
-    
     // Featured order güncellemesi için çakışma kontrolü
     if (body.featured_order !== undefined && body.is_featured === true) {
       // Aynı featured_order'a sahip başka bir ürün var mı kontrol et
@@ -73,6 +71,12 @@ export async function PUT(
       body.featured_order = null;
     }
     
+    // Optimize: Önce category'yi al, sonra update yap
+    const existingProduct: any = await Product.findById(params.id).lean();
+    if (!existingProduct) {
+      return NextResponse.json({ error: 'Ürün bulunamadı' }, { status: 404 });
+    }
+
     const product: any = await Product.findByIdAndUpdate(
       params.id,
       { ...body, updated_at: new Date() },
@@ -80,17 +84,12 @@ export async function PUT(
         new: true,
         runValidators: true,
       }
-    ).lean();
-    
-    if (!product) {
-      return NextResponse.json({ error: 'Ürün bulunamadı' }, { status: 404 });
-    }
-    
-    console.log('Product updated successfully:', product._id);
+    ).select('name description price image_url images store_type category_id is_featured is_active featured_order created_at').lean();
     
     const productObj: any = { ...product };
+    // Category bilgisini sadece değiştiyse veya yoksa al
     if (product.category_id) {
-      const category: any = await Category.findById(product.category_id).lean();
+      const category: any = await Category.findById(product.category_id).select('_id name slug').lean();
       if (category) {
         productObj.category_id = {
           _id: category._id,
@@ -101,9 +100,10 @@ export async function PUT(
     }
     
     const response = NextResponse.json(productObj);
-    
-    // Cache'i invalidate et (featured products değişti)
-    response.headers.set('Cache-Control', 'no-store, must-revalidate');
+    // Admin panel için cache bypass
+    response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    response.headers.set('Pragma', 'no-cache');
+    response.headers.set('Expires', '0');
     
     return response;
   } catch (error: any) {
@@ -125,7 +125,13 @@ export async function DELETE(
     if (!product) {
       return NextResponse.json({ error: 'Ürün bulunamadı' }, { status: 404 });
     }
-    return NextResponse.json({ message: 'Ürün silindi' });
+    
+    const response = NextResponse.json({ message: 'Ürün silindi' });
+    // Admin panel için cache bypass
+    response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    response.headers.set('Pragma', 'no-cache');
+    response.headers.set('Expires', '0');
+    return response;
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
