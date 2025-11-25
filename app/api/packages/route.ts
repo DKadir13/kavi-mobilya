@@ -115,7 +115,7 @@ export async function POST(request: NextRequest) {
     // Fiyat hesapla (opsiyonel)
     let totalPrice = body.price;
     if (!totalPrice) {
-      totalPrice = products.reduce((sum, p) => sum + (p.price || 0), 0);
+      totalPrice = products.reduce((sum: number, p: any) => sum + (p.price || 0), 0);
     }
 
     // Store type belirle (eğer belirtilmediyse)
