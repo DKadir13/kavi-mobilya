@@ -25,6 +25,12 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from '@/components/ui/pagination';
+import {
+  Tabs,
+  TabsList,
+  TabsTrigger,
+  TabsContent,
+} from '@/components/ui/tabs';
 import { useDebounce } from '@/hooks/useDebounce';
 
 type Product = {
@@ -71,11 +77,15 @@ export default function ProductsPage() {
   const [allPackages, setAllPackages] = useState<Package[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
+  const [packagesLoading, setPackagesLoading] = useState(false);
+  const [packagesLoaded, setPackagesLoaded] = useState(false); // Paketler yüklendi mi?
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [selectedStore, setSelectedStore] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [sortBy, setSortBy] = useState<string>('default');
   const [currentPage, setCurrentPage] = useState<number>(1);
+  const [currentPackagePage, setCurrentPackagePage] = useState<number>(1);
+  const [activeTab, setActiveTab] = useState<'products' | 'packages'>('products');
   const searchParams = useSearchParams();
   const { addToCart } = useCart();
   const debouncedSearch = useDebounce(searchQuery, 300);
@@ -118,10 +128,8 @@ export default function ProductsPage() {
         params.store_type = store;
       }
 
-      const [productsData, packagesData] = await Promise.all([
-        productsApi.getAll(params),
-        packagesApi.getAll({ ...params, is_active: true }).catch(() => []), // Paketler yüklenemezse boş array
-      ]);
+      // Sadece ürünleri yükle - paketler lazy load edilecek
+      const productsData = await productsApi.getAll(params);
 
       const formatted = productsData.map((product: any) => ({
         ...product,
@@ -129,12 +137,6 @@ export default function ProductsPage() {
         categories: product.category_id !== null && typeof product.category_id === 'object' ? product.category_id : null,
       }));
       setAllProducts(formatted);
-
-      const formattedPackages = packagesData.map((pkg: any) => ({
-        ...pkg,
-        id: pkg._id,
-      }));
-      setAllPackages(formattedPackages);
       setCurrentPage(1); // Reset to first page when filters change
     } catch (error: any) {
       console.error('Product load error:', error);
@@ -152,6 +154,39 @@ export default function ProductsPage() {
       setLoading(false);
     }
   }, [categories]);
+
+  // Paketleri lazy load et - sadece paketler sekmesine tıklandığında yükle
+  const loadPackages = useCallback(async (category: string, store: string) => {
+    if (packagesLoaded) return; // Zaten yüklendiyse tekrar yükleme
+    
+    setPackagesLoading(true);
+    try {
+      const cat = categories.find((c) => c.slug === category);
+      
+      const params: any = { is_active: true };
+      if (category !== 'all' && cat) {
+        // Paketler kategori bazlı değil, sadece store_type'a göre filtrelenir
+      }
+      if (store !== 'all') {
+        params.store_type = store;
+      }
+
+      const packagesData = await packagesApi.getAll(params).catch(() => []);
+
+      const formattedPackages = packagesData.map((pkg: any) => ({
+        ...pkg,
+        id: pkg._id,
+      }));
+      setAllPackages(formattedPackages);
+      setPackagesLoaded(true);
+      setCurrentPackagePage(1);
+    } catch (error: any) {
+      console.error('Package load error:', error);
+      // Silent fail
+    } finally {
+      setPackagesLoading(false);
+    }
+  }, [categories, packagesLoaded]);
 
   useEffect(() => {
     loadCategories();
@@ -229,25 +264,27 @@ export default function ProductsPage() {
     return filtered;
   }, [allPackages, debouncedSearch, sortBy]);
 
-  // Combined items (products + packages) for pagination
-  const allItems = useMemo(() => {
-    const items = [
-      ...filteredProducts.map((p) => ({ ...p, itemType: 'product' as const })),
-      ...filteredPackages.map((p) => ({ ...p, itemType: 'package' as const })),
-    ];
-    return items;
-  }, [filteredProducts, filteredPackages]);
-
-  // Paginated items
-  const paginatedItems = useMemo(() => {
+  // Paginated products
+  const paginatedProducts = useMemo(() => {
     const startIndex = (currentPage - 1) * PRODUCTS_PER_PAGE;
     const endIndex = startIndex + PRODUCTS_PER_PAGE;
-    return allItems.slice(startIndex, endIndex);
-  }, [allItems, currentPage]);
+    return filteredProducts.slice(startIndex, endIndex);
+  }, [filteredProducts, currentPage]);
 
-  const totalPages = useMemo(() => {
-    return Math.ceil(allItems.length / PRODUCTS_PER_PAGE);
-  }, [allItems]);
+  const totalProductPages = useMemo(() => {
+    return Math.ceil(filteredProducts.length / PRODUCTS_PER_PAGE);
+  }, [filteredProducts]);
+
+  // Paginated packages
+  const paginatedPackages = useMemo(() => {
+    const startIndex = (currentPackagePage - 1) * PRODUCTS_PER_PAGE;
+    const endIndex = startIndex + PRODUCTS_PER_PAGE;
+    return filteredPackages.slice(startIndex, endIndex);
+  }, [filteredPackages, currentPackagePage]);
+
+  const totalPackagePages = useMemo(() => {
+    return Math.ceil(filteredPackages.length / PRODUCTS_PER_PAGE);
+  }, [filteredPackages]);
 
   const handleAddToCart = useCallback((product: Product) => {
     const categoryName = product.category_id !== null && typeof product.category_id === 'object' 
@@ -375,47 +412,230 @@ export default function ProductsPage() {
             </Select>
           </div>
 
-          {/* Results Count */}
-          <div className="text-sm text-gray-600">
-            {filteredProducts.length} ürün, {filteredPackages.length} paket bulundu
-            {filteredProducts.length > PRODUCTS_PER_PAGE && (
-              <span className="ml-2">
-                (Sayfa {currentPage} / {totalPages})
-              </span>
-            )}
-          </div>
         </div>
 
-        {loading ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
-              <div
-                key={i}
-                className="bg-white rounded-xl overflow-hidden shadow-md animate-fade-in"
-                style={{ animationDelay: `${i * 100}ms` }}
-              >
-                <div className="h-64 bg-gray-200 animate-pulse" />
-                <div className="p-4 space-y-3">
-                  <div className="h-6 bg-gray-200 rounded animate-pulse" />
-                  <div className="h-4 bg-gray-200 rounded animate-pulse w-2/3" />
-                  <div className="h-8 bg-gray-200 rounded animate-pulse" />
+        {/* Tabs for Products and Packages */}
+        <Tabs value={activeTab} onValueChange={(value) => {
+          setActiveTab(value as 'products' | 'packages');
+          if (value === 'packages' && !packagesLoaded) {
+            loadPackages(selectedCategory, selectedStore);
+          }
+        }} className="w-full">
+          <TabsList className="grid w-full max-w-md grid-cols-2 mb-6">
+            <TabsTrigger value="products" className="text-base">
+              Ürünler ({filteredProducts.length})
+            </TabsTrigger>
+            <TabsTrigger value="packages" className="text-base">
+              Paketler ({filteredPackages.length})
+            </TabsTrigger>
+          </TabsList>
+
+          {/* Products Tab */}
+          <TabsContent value="products" className="space-y-6">
+            {/* Results Count */}
+            <div className="text-sm text-gray-600">
+              {filteredProducts.length} ürün bulundu
+              {filteredProducts.length > PRODUCTS_PER_PAGE && (
+                <span className="ml-2">
+                  (Sayfa {currentPage} / {totalProductPages})
+                </span>
+              )}
+            </div>
+
+            {loading ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+                  <div
+                    key={i}
+                    className="bg-white rounded-xl overflow-hidden shadow-md animate-fade-in"
+                    style={{ animationDelay: `${i * 100}ms` }}
+                  >
+                    <div className="h-64 bg-gray-200 animate-pulse" />
+                    <div className="p-4 space-y-3">
+                      <div className="h-6 bg-gray-200 rounded animate-pulse" />
+                      <div className="h-4 bg-gray-200 rounded animate-pulse w-2/3" />
+                      <div className="h-8 bg-gray-200 rounded animate-pulse" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : filteredProducts.length === 0 ? (
+              <div className="text-center py-16 animate-fade-in">
+                <p className="text-gray-500 text-lg">
+                  {searchQuery ? 'Arama kriterlerinize uygun ürün bulunamadı.' : 'Seçili filtrelere uygun ürün bulunamadı.'}
+                </p>
+              </div>
+            ) : (
+              <>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                  {paginatedProducts.map((product, index) => (
+                    <div
+                      key={product._id || product.id}
+                      className="bg-white rounded-xl overflow-hidden shadow-md hover:shadow-xl transition-all group animate-fade-in-up"
+                      style={{ animationDelay: `${index * 50}ms` }}
+                    >
+                      <Link href={`/urunler/${product._id || product.id}`}>
+                        <ProductImageCarousel 
+                          product={product}
+                        />
+                      </Link>
+
+                      <div className="p-4">
+                        <Link href={`/urunler/${product._id || product.id}`}>
+                          <h3 className="font-semibold text-lg mb-2 line-clamp-2 hover:text-[#a42a2a] transition-colors">
+                            {product.name}
+                          </h3>
+                        </Link>
+                        <p className="text-sm text-gray-500 mb-2">
+                          {product.category_id !== null && typeof product.category_id === 'object' 
+                            ? product.category_id.name 
+                            : 'Diğer'}
+                        </p>
+                        {product.price && (
+                          <p className="text-[#a42a2a] font-bold text-lg mb-3">
+                            {product.price.toLocaleString('tr-TR')} TL
+                          </p>
+                        )}
+                        <Button
+                          onClick={() => handleAddToCart(product)}
+                          className="w-full bg-[#0a0a0a] hover:bg-[#a42a2a] text-white"
+                        >
+                          <ShoppingCart className="h-4 w-4 mr-2" />
+                          Sepete Ekle
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Products Pagination */}
+                {totalProductPages > 1 && (
+              <div className="mt-12 flex flex-col items-center gap-4">
+                <Pagination>
+                  <PaginationContent>
+                    <PaginationItem>
+                      <button
+                        onClick={() => {
+                          if (currentPage > 1) {
+                            setCurrentPage(currentPage - 1);
+                            window.scrollTo({ top: 0, behavior: 'smooth' });
+                          }
+                        }}
+                        disabled={currentPage === 1}
+                        className={`flex items-center gap-1 px-4 py-2 rounded-md border transition-colors ${
+                          currentPage === 1
+                            ? 'opacity-50 cursor-not-allowed'
+                            : 'hover:bg-gray-100 cursor-pointer'
+                        }`}
+                      >
+                        <ChevronLeft className="h-4 w-4" />
+                        <span>Önceki</span>
+                      </button>
+                    </PaginationItem>
+                    
+                    {Array.from({ length: totalProductPages }, (_, i) => i + 1).map((page) => {
+                      if (
+                        page === 1 ||
+                        page === totalProductPages ||
+                        (page >= currentPage - 1 && page <= currentPage + 1)
+                      ) {
+                        return (
+                          <PaginationItem key={page}>
+                            <button
+                              onClick={() => {
+                                setCurrentPage(page);
+                                window.scrollTo({ top: 0, behavior: 'smooth' });
+                              }}
+                              className={`min-w-[40px] px-3 py-2 rounded-md border transition-colors ${
+                                currentPage === page
+                                  ? 'bg-[#a42a2a] text-white border-[#a42a2a]'
+                                  : 'hover:bg-gray-100'
+                              }`}
+                            >
+                              {page}
+                            </button>
+                          </PaginationItem>
+                        );
+                      } else if (page === currentPage - 2 || page === currentPage + 2) {
+                        return (
+                          <PaginationItem key={`ellipsis-${page}`}>
+                            <span className="px-2 py-2">...</span>
+                          </PaginationItem>
+                        );
+                      }
+                      return null;
+                    })}
+                    
+                    <PaginationItem>
+                      <button
+                        onClick={() => {
+                          if (currentPage < totalProductPages) {
+                            setCurrentPage(currentPage + 1);
+                            window.scrollTo({ top: 0, behavior: 'smooth' });
+                          }
+                        }}
+                        disabled={currentPage === totalProductPages}
+                        className={`flex items-center gap-1 px-4 py-2 rounded-md border transition-colors ${
+                          currentPage === totalProductPages
+                            ? 'opacity-50 cursor-not-allowed'
+                            : 'hover:bg-gray-100 cursor-pointer'
+                        }`}
+                      >
+                        <span>Sonraki</span>
+                        <ChevronRight className="h-4 w-4" />
+                      </button>
+                    </PaginationItem>
+                  </PaginationContent>
+                </Pagination>
+                
+                <div className="text-sm text-gray-600">
+                  Sayfa {currentPage} / {totalProductPages} - Toplam {filteredProducts.length} ürün
                 </div>
               </div>
-            ))}
-          </div>
-        ) : allItems.length === 0 ? (
-          <div className="text-center py-16 animate-fade-in">
-            <p className="text-gray-500 text-lg">
-              {searchQuery ? 'Arama kriterlerinize uygun ürün veya paket bulunamadı.' : 'Seçili filtrelere uygun ürün veya paket bulunamadı.'}
-            </p>
-          </div>
-        ) : (
-          <>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {paginatedItems.map((item, index) => {
-                if (item.itemType === 'package') {
-                  const pkg = item as Package & { itemType: 'package' };
-                  return (
+            )}
+              </>
+            )}
+          </TabsContent>
+
+          {/* Packages Tab */}
+          <TabsContent value="packages" className="space-y-6">
+            {/* Results Count */}
+            <div className="text-sm text-gray-600">
+              {filteredPackages.length} paket bulundu
+              {filteredPackages.length > PRODUCTS_PER_PAGE && (
+                <span className="ml-2">
+                  (Sayfa {currentPackagePage} / {totalPackagePages})
+                </span>
+              )}
+            </div>
+
+            {packagesLoading ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                {[1, 2, 3, 4].map((i) => (
+                  <div
+                    key={i}
+                    className="bg-white rounded-xl overflow-hidden shadow-md animate-fade-in border-2 border-blue-200"
+                    style={{ animationDelay: `${i * 100}ms` }}
+                  >
+                    <div className="h-64 bg-gray-200 animate-pulse" />
+                    <div className="p-4 space-y-3">
+                      <div className="h-6 bg-gray-200 rounded animate-pulse" />
+                      <div className="h-4 bg-gray-200 rounded animate-pulse w-2/3" />
+                      <div className="h-8 bg-gray-200 rounded animate-pulse" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : filteredPackages.length === 0 ? (
+              <div className="text-center py-16 animate-fade-in">
+                <p className="text-gray-500 text-lg">
+                  {searchQuery ? 'Arama kriterlerinize uygun paket bulunamadı.' : 'Seçili filtrelere uygun paket bulunamadı.'}
+                </p>
+              </div>
+            ) : (
+              <>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                  {paginatedPackages.map((pkg, index) => (
                     <div
                       key={pkg._id || pkg.id}
                       className="bg-white rounded-xl overflow-hidden shadow-md hover:shadow-xl transition-all group animate-fade-in-up border-2 border-blue-200"
@@ -476,91 +696,43 @@ export default function ProductsPage() {
                         </Button>
                       </div>
                     </div>
-                  );
-                } else {
-                  const product = item as Product & { itemType: 'product' };
-                  return (
-                    <div
-                      key={product._id || product.id}
-                      className="bg-white rounded-xl overflow-hidden shadow-md hover:shadow-xl transition-all group animate-fade-in-up"
-                      style={{ animationDelay: `${index * 50}ms` }}
-                    >
-                      <Link href={`/urunler/${product._id || product.id}`}>
-                        <ProductImageCarousel 
-                          product={product}
-                        />
-                      </Link>
+                  ))}
+                </div>
 
-                      <div className="p-4">
-                        <Link href={`/urunler/${product._id || product.id}`}>
-                          <h3 className="font-semibold text-lg mb-2 line-clamp-2 hover:text-[#a42a2a] transition-colors">
-                            {product.name}
-                          </h3>
-                        </Link>
-                        <p className="text-sm text-gray-500 mb-2">
-                          {product.category_id !== null && typeof product.category_id === 'object' 
-                            ? product.category_id.name 
-                            : 'Diğer'}
-                        </p>
-                        {product.price && (
-                          <p className="text-[#a42a2a] font-bold text-lg mb-3">
-                            {product.price.toLocaleString('tr-TR')} TL
-                          </p>
-                        )}
-                        <Button
-                          onClick={() => handleAddToCart(product)}
-                          className="w-full bg-[#0a0a0a] hover:bg-[#a42a2a] text-white"
-                        >
-                          <ShoppingCart className="h-4 w-4 mr-2" />
-                          Sepete Ekle
-                        </Button>
-                      </div>
-                    </div>
-                  );
-                }
-              })}
-            </div>
-
-            {/* Pagination */}
-            {totalPages > 1 && (
-              <div className="mt-12 flex flex-col items-center gap-4">
-                <Pagination>
-                  <PaginationContent>
-                    <PaginationItem>
-                      <button
-                        onClick={() => {
-                          if (currentPage > 1) {
-                            setCurrentPage(currentPage - 1);
-                            window.scrollTo({ top: 0, behavior: 'smooth' });
-                          }
-                        }}
-                        disabled={currentPage === 1}
-                        className={`flex items-center gap-1 px-4 py-2 rounded-md border transition-colors ${
-                          currentPage === 1
-                            ? 'opacity-50 cursor-not-allowed'
-                            : 'hover:bg-gray-100 cursor-pointer'
-                        }`}
-                      >
-                        <ChevronLeft className="h-4 w-4" />
-                        <span>Önceki</span>
-                      </button>
-                    </PaginationItem>
-                    
-                    {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
-                      if (
-                        page === 1 ||
-                        page === totalPages ||
-                        (page >= currentPage - 1 && page <= currentPage + 1)
-                      ) {
-                        return (
+                {/* Packages Pagination */}
+                {totalPackagePages > 1 && (
+                  <div className="mt-12 flex flex-col items-center gap-4">
+                    <Pagination>
+                      <PaginationContent>
+                        <PaginationItem>
+                          <button
+                            onClick={() => {
+                              if (currentPackagePage > 1) {
+                                setCurrentPackagePage(currentPackagePage - 1);
+                                window.scrollTo({ top: 0, behavior: 'smooth' });
+                              }
+                            }}
+                            disabled={currentPackagePage === 1}
+                            className={`flex items-center gap-1 px-4 py-2 rounded-md border transition-colors ${
+                              currentPackagePage === 1
+                                ? 'opacity-50 cursor-not-allowed'
+                                : 'hover:bg-gray-100 cursor-pointer'
+                            }`}
+                          >
+                            <ChevronLeft className="h-4 w-4" />
+                            <span>Önceki</span>
+                          </button>
+                        </PaginationItem>
+                        
+                        {Array.from({ length: totalPackagePages }, (_, i) => i + 1).map((page) => (
                           <PaginationItem key={page}>
                             <button
                               onClick={() => {
-                                setCurrentPage(page);
+                                setCurrentPackagePage(page);
                                 window.scrollTo({ top: 0, behavior: 'smooth' });
                               }}
-                              className={`min-w-[40px] px-3 py-2 rounded-md border transition-colors ${
-                                currentPage === page
+                              className={`px-4 py-2 rounded-md border transition-colors ${
+                                currentPackagePage === page
                                   ? 'bg-[#a42a2a] text-white border-[#a42a2a]'
                                   : 'hover:bg-gray-100'
                               }`}
@@ -568,46 +740,39 @@ export default function ProductsPage() {
                               {page}
                             </button>
                           </PaginationItem>
-                        );
-                      } else if (page === currentPage - 2 || page === currentPage + 2) {
-                        return (
-                          <PaginationItem key={`ellipsis-${page}`}>
-                            <span className="px-2 py-2">...</span>
-                          </PaginationItem>
-                        );
-                      }
-                      return null;
-                    })}
+                        ))}
+                        
+                        <PaginationItem>
+                          <button
+                            onClick={() => {
+                              if (currentPackagePage < totalPackagePages) {
+                                setCurrentPackagePage(currentPackagePage + 1);
+                                window.scrollTo({ top: 0, behavior: 'smooth' });
+                              }
+                            }}
+                            disabled={currentPackagePage === totalPackagePages}
+                            className={`flex items-center gap-1 px-4 py-2 rounded-md border transition-colors ${
+                              currentPackagePage === totalPackagePages
+                                ? 'opacity-50 cursor-not-allowed'
+                                : 'hover:bg-gray-100 cursor-pointer'
+                            }`}
+                          >
+                            <span>Sonraki</span>
+                            <ChevronRight className="h-4 w-4" />
+                          </button>
+                        </PaginationItem>
+                      </PaginationContent>
+                    </Pagination>
                     
-                    <PaginationItem>
-                      <button
-                        onClick={() => {
-                          if (currentPage < totalPages) {
-                            setCurrentPage(currentPage + 1);
-                            window.scrollTo({ top: 0, behavior: 'smooth' });
-                          }
-                        }}
-                        disabled={currentPage === totalPages}
-                        className={`flex items-center gap-1 px-4 py-2 rounded-md border transition-colors ${
-                          currentPage === totalPages
-                            ? 'opacity-50 cursor-not-allowed'
-                            : 'hover:bg-gray-100 cursor-pointer'
-                        }`}
-                      >
-                        <span>Sonraki</span>
-                        <ChevronRight className="h-4 w-4" />
-                      </button>
-                    </PaginationItem>
-                  </PaginationContent>
-                </Pagination>
-                
-                <div className="text-sm text-gray-600">
-                  Sayfa {currentPage} / {totalPages} - Toplam {filteredProducts.length} ürün
-                </div>
-              </div>
+                    <div className="text-sm text-gray-600">
+                      Sayfa {currentPackagePage} / {totalPackagePages} - Toplam {filteredPackages.length} paket
+                    </div>
+                  </div>
+                )}
+              </>
             )}
-          </>
-        )}
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );
