@@ -279,7 +279,15 @@ export default function CartSidebar({ open, onClose }: CartSidebarProps) {
                                 variant="ghost"
                                 size="icon"
                                 className="h-6 w-6"
-                                onClick={() => updateSubItemQuantity(item.id, subItem.id, subItem.quantity - 1)}
+                                onClick={() => {
+                                  if (subItem.quantity <= 1) {
+                                    // Sayı 1 ise direkt kaldır
+                                    removeSubItem(item.id, subItem.id);
+                                  } else {
+                                    // Sayı 1'den fazlaysa azalt
+                                    updateSubItemQuantity(item.id, subItem.id, subItem.quantity - 1);
+                                  }
+                                }}
                                 disabled={!subItem.is_optional && subItem.quantity <= 1}
                                 title="Azalt"
                               >
@@ -298,8 +306,8 @@ export default function CartSidebar({ open, onClose }: CartSidebarProps) {
                                 <Plus className="h-3 w-3" />
                               </Button>
                             </div>
-                            {/* Silme Butonu (Sadece Opsiyonel) */}
-                            {subItem.is_optional && (
+                            {/* Silme Butonu (Sadece Opsiyonel ve sayı 1'den fazlaysa göster) */}
+                            {subItem.is_optional && subItem.quantity > 1 && (
                               <Button
                                 variant="ghost"
                                 size="icon"
