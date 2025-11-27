@@ -96,10 +96,21 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const removeSubItem = useCallback((productId: string, subItemId: string) => {
     setItems((prev) => {
       const productItem = prev.find((i) => i.id === productId);
-      if (!productItem || !productItem.sub_items) return prev;
+      if (!productItem) {
+        toast.error('Ürün bulunamadı');
+        return prev;
+      }
+
+      if (!productItem.sub_items || productItem.sub_items.length === 0) {
+        toast.error('Bu ürünün parçası yok');
+        return prev;
+      }
 
       const subItem = productItem.sub_items.find((s) => s.id === subItemId);
-      if (!subItem) return prev;
+      if (!subItem) {
+        toast.error('Parça bulunamadı');
+        return prev;
+      }
 
       // Opsiyonel değilse çıkarılamaz
       if (!subItem.is_optional) {

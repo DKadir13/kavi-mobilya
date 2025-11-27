@@ -206,7 +206,7 @@ export default function SubItemEditor({
                         type="number"
                         step="0.01"
                         value={subItem.price || ''}
-                        onChange={(e) => handleUpdate('price', e.target.value ? parseFloat(e.target.value) : undefined)}
+                        onChange={(e) => handleUpdate('price', e.target.value || '')}
                         placeholder="0.00"
                       />
                     </div>
