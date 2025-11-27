@@ -1,9 +1,14 @@
 import mongoose, { Schema } from 'mongoose';
 
 export interface IProductSubItem {
-  product_id: string; // Parça olarak eklenen ürünün ID'si
+  product_id?: string; // Parça olarak eklenen ürünün ID'si (opsiyonel - eğer mevcut ürün ise)
+  name?: string; // Parça adı (yeni parça ise)
+  description?: string; // Parça açıklaması
+  price?: number; // Parça fiyatı
+  image_url?: string; // Parça görseli
   quantity?: number; // Varsayılan adet (opsiyonel)
   is_optional?: boolean; // Opsiyonel parça mı? (sepette çıkarılabilir)
+  sub_items?: IProductSubItem[]; // Parçanın kendi parçaları (nested)
 }
 
 export interface IProduct {
@@ -26,9 +31,14 @@ export interface IProduct {
 
 const ProductSubItemSchema = new Schema(
   {
-    product_id: { type: String, required: true, ref: 'Product' },
+    product_id: { type: String, ref: 'Product' }, // Opsiyonel - eğer mevcut ürün ise
+    name: { type: String }, // Parça adı (yeni parça ise)
+    description: { type: String }, // Parça açıklaması
+    price: { type: Number }, // Parça fiyatı
+    image_url: { type: String }, // Parça görseli
     quantity: { type: Number, default: 1 },
     is_optional: { type: Boolean, default: false }, // Opsiyonel parça mı? (sepette çıkarılabilir)
+    sub_items: { type: [Schema.Types.Mixed], default: [] }, // Parçanın kendi parçaları (nested)
   },
   { _id: false }
 );

@@ -42,9 +42,22 @@ type Product = {
     slug: string;
   } | null;
   sub_items?: Array<{
-    product_id: string;
+    product_id?: string;
+    name?: string;
+    description?: string;
+    price?: number;
+    image_url?: string;
     quantity: number;
     is_optional: boolean;
+    sub_items?: Array<{
+      product_id?: string;
+      name?: string;
+      description?: string;
+      price?: number;
+      image_url?: string;
+      quantity: number;
+      is_optional: boolean;
+    }>;
   }>;
 };
 
@@ -207,19 +220,33 @@ export default function ProductsPage() {
         // Sub items'ın detaylarını al
         const subItemProducts = await Promise.all(
           product.sub_items.map(async (subItem) => {
-            try {
-              const subProduct = await productsApi.getById(subItem.product_id);
+            // Eğer product_id varsa mevcut ürünü çek
+            if (subItem.product_id) {
+              try {
+                const subProduct = await productsApi.getById(subItem.product_id);
+                return {
+                  id: subProduct._id,
+                  name: subProduct.name,
+                  image_url: subProduct.image_url,
+                  price: subProduct.price,
+                  quantity: subItem.quantity || 1,
+                  is_optional: subItem.is_optional || false,
+                };
+              } catch {
+                return null;
+              }
+            } else if (subItem.name) {
+              // Yeni parça (name, description, price, image_url ile)
               return {
-                id: subProduct._id,
-                name: subProduct.name,
-                image_url: subProduct.image_url,
-                price: subProduct.price,
+                id: `sub-${Date.now()}-${Math.random()}`, // Geçici ID
+                name: subItem.name,
+                image_url: subItem.image_url || null,
+                price: subItem.price || null,
                 quantity: subItem.quantity || 1,
                 is_optional: subItem.is_optional || false,
               };
-            } catch {
-              return null;
             }
+            return null;
           })
         );
         subItems = subItemProducts.filter(item => item !== null);

@@ -22,10 +22,11 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { Plus, Edit, Trash2, Search, Upload, X } from 'lucide-react';
+import { Plus, Edit, Trash2, Search, Upload, X, ChevronDown, ChevronRight } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import Image from 'next/image';
 import { toast } from 'sonner';
+import SubItemEditor from './SubItemEditor';
 
 type Product = {
   _id: string;
@@ -39,7 +40,24 @@ type Product = {
   category_id: string | { _id: string; name: string; slug: string } | null;
   is_featured: boolean;
   is_active: boolean;
-  sub_items?: Array<{ product_id: string; quantity: number; is_optional: boolean }>;
+  sub_items?: Array<{
+    product_id?: string;
+    name?: string;
+    description?: string;
+    price?: number;
+    image_url?: string;
+    quantity: number;
+    is_optional: boolean;
+    sub_items?: Array<{
+      product_id?: string;
+      name?: string;
+      description?: string;
+      price?: number;
+      image_url?: string;
+      quantity: number;
+      is_optional: boolean;
+    }>;
+  }>;
 };
 
 type Category = {
@@ -68,7 +86,24 @@ export default function ProductsManagementPage() {
     category_id: string | { _id: string; id?: string } | 'none';
     is_featured: boolean;
     is_active: boolean;
-    sub_items: Array<{ product_id: string; quantity: number; is_optional: boolean }>;
+    sub_items: Array<{
+      product_id?: string;
+      name?: string;
+      description?: string;
+      price?: number | string;
+      image_url?: string;
+      quantity: number;
+      is_optional: boolean;
+      sub_items?: Array<{
+        product_id?: string;
+        name?: string;
+        description?: string;
+        price?: number | string;
+        image_url?: string;
+        quantity: number;
+        is_optional: boolean;
+      }>;
+    }>;
   }>({
     name: '',
     description: '',
@@ -180,6 +215,16 @@ export default function ProductsManagementPage() {
         }
       }
 
+      // sub_items'ı formatla - price'ları number'a çevir
+      const formattedSubItems = (formData.sub_items || []).map((si) => ({
+        ...si,
+        price: si.price ? (typeof si.price === 'string' ? parseFloat(si.price) : si.price) : undefined,
+        sub_items: (si.sub_items || []).map((nestedSi) => ({
+          ...nestedSi,
+          price: nestedSi.price ? (typeof nestedSi.price === 'string' ? parseFloat(nestedSi.price) : nestedSi.price) : undefined,
+        })),
+      }));
+
       const productData = {
           name: formData.name.trim(),
           description: formData.description?.trim() || null,
@@ -190,7 +235,7 @@ export default function ProductsManagementPage() {
           category_id: categoryIdValue,
         is_featured: formData.is_featured,
         is_active: formData.is_active,
-        sub_items: formData.sub_items || [],
+        sub_items: formattedSubItems,
       };
 
       if (editingProduct) {
@@ -321,7 +366,16 @@ export default function ProductsManagementPage() {
       category_id: categoryId || 'none',
       is_featured: product.is_featured,
       is_active: product.is_active,
-      sub_items: (product as any).sub_items || [],
+      sub_items: ((product as any).sub_items || []).map((si: any) => ({
+        product_id: si.product_id,
+        name: si.name,
+        description: si.description,
+        price: si.price,
+        image_url: si.image_url,
+        quantity: si.quantity || 1,
+        is_optional: si.is_optional || false,
+        sub_items: si.sub_items || [],
+      })),
     });
     setImagePreview(productImages);
     setDialogOpen(true);
@@ -692,90 +746,53 @@ export default function ProductsManagementPage() {
 
               {/* Ürün Parçaları (Sub Items) */}
               <div className="space-y-2 border rounded-lg p-4">
-                <Label>Ürün Parçaları (Örn: Yatak Odası Takımı = Yatak + Komodin + Gardırop)</Label>
-                <div className="space-y-3">
-                  {formData.sub_items.map((subItem, index) => {
-                    const subProduct = products.find(p => (p._id || p.id) === subItem.product_id);
-                    return (
-                      <div key={index} className="flex items-center gap-2 p-3 bg-gray-50 rounded-lg">
-                        <div className="flex-1">
-                          <p className="font-medium text-sm">{subProduct?.name || 'Ürün bulunamadı'}</p>
-                          <div className="flex items-center gap-4 mt-1">
-                            <div className="flex items-center gap-2">
-                              <Label htmlFor={`quantity-${index}`} className="text-xs">Adet:</Label>
-                              <Input
-                                id={`quantity-${index}`}
-                                type="number"
-                                min="1"
-                                value={subItem.quantity}
-                                onChange={(e) => {
-                                  const newSubItems = [...formData.sub_items];
-                                  newSubItems[index].quantity = parseInt(e.target.value) || 1;
-                                  setFormData({ ...formData, sub_items: newSubItems });
-                                }}
-                                className="w-20 h-8 text-sm"
-                              />
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <Label htmlFor={`optional-${index}`} className="text-xs">Opsiyonel:</Label>
-                              <Switch
-                                id={`optional-${index}`}
-                                checked={subItem.is_optional}
-                                onCheckedChange={(checked) => {
-                                  const newSubItems = [...formData.sub_items];
-                                  newSubItems[index].is_optional = checked;
-                                  setFormData({ ...formData, sub_items: newSubItems });
-                                }}
-                              />
-                            </div>
-                          </div>
-                        </div>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-red-500 hover:text-red-700"
-                          onClick={() => {
-                            const newSubItems = formData.sub_items.filter((_, i) => i !== index);
-                            setFormData({ ...formData, sub_items: newSubItems });
-                          }}
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    );
-                  })}
-                  
-                  <Select
-                    value=""
-                    onValueChange={(productId) => {
-                      if (formData.sub_items.some(item => item.product_id === productId)) {
-                        toast.info('Bu ürün zaten parça olarak eklenmiş');
-                        return;
-                      }
+                <div className="flex items-center justify-between mb-3">
+                  <Label>Ürün Parçaları</Label>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
                       const newSubItems = [...formData.sub_items, {
-                        product_id: productId,
+                        name: '',
+                        description: '',
+                        price: '',
+                        image_url: '',
                         quantity: 1,
                         is_optional: false,
+                        sub_items: [],
                       }];
                       setFormData({ ...formData, sub_items: newSubItems });
-                      toast.success('Parça eklendi');
                     }}
                   >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Parça olarak ürün seçin..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {products
-                        .filter(p => (p._id || p.id) !== (editingProduct?._id || editingProduct?.id))
-                        .filter(p => !formData.sub_items.some(item => item.product_id === (p._id || p.id)))
-                        .map((product) => (
-                          <SelectItem key={product._id || product.id} value={product._id || product.id || ''}>
-                            {product.name}
-                          </SelectItem>
-                        ))}
-                    </SelectContent>
-                  </Select>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Yeni Parça Ekle
+                  </Button>
+                </div>
+                <div className="space-y-3">
+                  {formData.sub_items.map((subItem, index) => (
+                    <SubItemEditor
+                      key={index}
+                      subItem={subItem}
+                      index={index}
+                      products={products}
+                      editingProduct={editingProduct}
+                      onUpdate={(updatedSubItem) => {
+                        const newSubItems = [...formData.sub_items];
+                        newSubItems[index] = updatedSubItem;
+                        setFormData({ ...formData, sub_items: newSubItems });
+                      }}
+                      onDelete={() => {
+                        const newSubItems = formData.sub_items.filter((_, i) => i !== index);
+                        setFormData({ ...formData, sub_items: newSubItems });
+                      }}
+                    />
+                  ))}
+                  {formData.sub_items.length === 0 && (
+                    <p className="text-sm text-gray-500 text-center py-4">
+                      Henüz parça eklenmedi. "Yeni Parça Ekle" butonuna tıklayarak parça ekleyebilirsiniz.
+                    </p>
+                  )}
                 </div>
               </div>
 
