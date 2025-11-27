@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
     const sales: any[] = await Sale.aggregate([
       { $match: query },
       { $sort: { created_at: -1 } }
-    ]).allowDiskUse(true);
+    ], { allowDiskUse: true });
     
     // Get all unique product IDs
     const productIds = Array.from(

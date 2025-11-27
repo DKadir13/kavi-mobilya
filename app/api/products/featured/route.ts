@@ -23,7 +23,7 @@ export async function GET() {
           featured_order: 1,
         }
       }
-    ]).allowDiskUse(true);
+    ], { allowDiskUse: true });
     
     // Get all unique category IDs
     const categoryIds = Array.from(

@@ -21,7 +21,7 @@ export async function GET() {
           order_index: 1,
         }
       }
-    ]).allowDiskUse(true);
+    ], { allowDiskUse: true });
     
     const response = NextResponse.json(categories);
     

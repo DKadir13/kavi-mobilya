@@ -47,6 +47,7 @@ ProductSchema.index({ category_id: 1 });
 ProductSchema.index({ store_type: 1 });
 ProductSchema.index({ is_active: 1 });
 ProductSchema.index({ is_featured: 1, featured_order: 1 });
+ProductSchema.index({ created_at: -1 }); // Sort işlemleri için kritik index (memory limit sorununu önler)
 
 const Product: any =
   mongoose.models.Product || mongoose.model('Product', ProductSchema);

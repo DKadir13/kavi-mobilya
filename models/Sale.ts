@@ -31,6 +31,7 @@ const SaleSchema = new Schema(
 // Indexes for better performance
 SaleSchema.index({ product_id: 1 });
 SaleSchema.index({ sale_date: 1 });
+SaleSchema.index({ created_at: -1 }); // Sort işlemleri için kritik index (memory limit sorununu önler)
 
 const Sale: any =
   mongoose.models.Sale || mongoose.model('Sale', SaleSchema);

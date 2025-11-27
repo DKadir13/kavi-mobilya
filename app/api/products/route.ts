@@ -24,10 +24,11 @@ export async function GET(request: NextRequest) {
     // Optimize: Sadece gerekli alanları seç, limit ekle
     // allowDiskUse: true - Büyük sort işlemleri için disk kullanımına izin ver
     // Aggregation pipeline kullanarak allowDiskUse desteği
+    // Not: Limit'i 500'e düşürdük (memory limit sorununu önlemek için)
     const products: any[] = await Product.aggregate([
       { $match: query },
       { $sort: { created_at: -1 } },
-      { $limit: 1000 }, // Maksimum 1000 ürün (admin panel için yeterli)
+      { $limit: 500 }, // Maksimum 500 ürün (admin panel için yeterli, memory limit sorununu önler)
       {
         $project: {
           _id: 1,
@@ -44,7 +45,7 @@ export async function GET(request: NextRequest) {
           created_at: 1,
         }
       }
-    ]).allowDiskUse(true);
+    ], { allowDiskUse: true });
     
     // Get all unique category IDs
     const categoryIds = Array.from(
