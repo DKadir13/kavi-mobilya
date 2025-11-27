@@ -163,9 +163,13 @@ export default function CartSidebar({ open, onClose }: CartSidebarProps) {
                               variant="ghost"
                               size="icon"
                               className="h-7 w-7"
-                              onClick={() =>
-                                updateQuantity(item.id, item.quantity - 1)
-                              }
+                              onClick={() => {
+                                if (item.quantity <= 1) {
+                                  removeFromCart(item.id);
+                                } else {
+                                  updateQuantity(item.id, item.quantity - 1);
+                                }
+                              }}
                             >
                               <Minus className="h-3 w-3" />
                             </Button>
