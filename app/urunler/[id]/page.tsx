@@ -88,13 +88,11 @@ export default function ProductDetailPage() {
 
     // Sub items'ı yükle
     let subItems: any[] = [];
-    console.log('Product sub_items:', (product as any).sub_items);
     if ((product as any).sub_items && (product as any).sub_items.length > 0) {
       try {
         const { productsApi } = await import('@/lib/api');
         const subItemProducts = await Promise.all(
           (product as any).sub_items.map(async (subItem: any) => {
-            console.log('Processing subItem:', subItem);
             // Eğer product_id varsa mevcut ürünü çek
             if (subItem.product_id) {
               try {
@@ -107,8 +105,7 @@ export default function ProductDetailPage() {
                   quantity: subItem.quantity || 1,
                   is_optional: subItem.is_optional || false,
                 };
-              } catch (error) {
-                console.error('Sub product yüklenirken hata:', error);
+              } catch {
                 return null;
               }
             } else if (subItem.name) {
@@ -126,7 +123,6 @@ export default function ProductDetailPage() {
           })
         );
         subItems = subItemProducts.filter(item => item !== null);
-        console.log('Loaded subItems:', subItems);
       } catch (error) {
         console.error('Sub items yüklenirken hata:', error);
       }

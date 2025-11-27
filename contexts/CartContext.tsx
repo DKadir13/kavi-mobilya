@@ -29,6 +29,7 @@ type CartContextType = {
   removeFromCart: (id: string) => void;
   removeSubItem: (productId: string, subItemId: string) => void; // Ürünün parçasını çıkar
   addSubItem: (productId: string, subItem: CartSubItem) => void; // Ürünün parçasını ekle
+  updateSubItemQuantity: (productId: string, subItemId: string, quantity: number) => void; // Parça sayısını güncelle
   updateQuantity: (id: string, quantity: number) => void;
   clearCart: () => void;
   getTotalItems: () => number;
@@ -69,8 +70,6 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   }, [items]);
 
   const addToCart = useCallback((item: Omit<CartItem, 'quantity'>) => {
-    console.log('Adding to cart:', item);
-    console.log('Sub items:', item.sub_items);
     setItems((prev) => {
       const existing = prev.find((i) => i.id === item.id);
       if (existing) {
@@ -87,11 +86,9 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
               } 
             : i
         );
-        console.log('Updated cart item:', updated.find(i => i.id === item.id));
         toast.success(`${item.name} sepete eklendi`);
         return updated;
       }
-      console.log('New cart item with sub_items:', { ...item, quantity: 1 });
       toast.success(`${item.name} sepete eklendi`);
       return [...prev, { ...item, quantity: 1 }];
     });
@@ -160,10 +157,23 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
       const existingSubItems = productItem.sub_items || [];
       
-      // Zaten ekli mi kontrol et
-      if (existingSubItems.some((s) => s.id === subItem.id)) {
-        toast.info(`${subItem.name} zaten ekli`);
-        return prev;
+      // Zaten ekli mi kontrol et - eğer ekliyse quantity'yi artır
+      const existingIndex = existingSubItems.findIndex((s) => s.id === subItem.id);
+      if (existingIndex >= 0) {
+        const updatedSubItems = [...existingSubItems];
+        updatedSubItems[existingIndex] = {
+          ...updatedSubItems[existingIndex],
+          quantity: updatedSubItems[existingIndex].quantity + 1,
+        };
+        toast.success(`${subItem.name} sayısı artırıldı`);
+        return prev.map((item) =>
+          item.id === productId
+            ? {
+                ...item,
+                sub_items: updatedSubItems,
+              }
+            : item
+        );
       }
 
       const updatedSubItems = [...existingSubItems, subItem];
@@ -180,6 +190,34 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       );
     });
   }, []);
+
+  const updateSubItemQuantity = useCallback((productId: string, subItemId: string, quantity: number) => {
+    if (quantity <= 0) {
+      // Quantity 0 veya negatifse parçayı çıkar (opsiyonel ise)
+      removeSubItem(productId, subItemId);
+      return;
+    }
+
+    setItems((prev) => {
+      const productItem = prev.find((i) => i.id === productId);
+      if (!productItem || !productItem.sub_items) return prev;
+
+      const updatedSubItems = productItem.sub_items.map((subItem) =>
+        subItem.id === subItemId
+          ? { ...subItem, quantity }
+          : subItem
+      );
+
+      return prev.map((item) =>
+        item.id === productId
+          ? {
+              ...item,
+              sub_items: updatedSubItems,
+            }
+          : item
+      );
+    });
+  }, [removeSubItem]);
 
   const updateQuantity = useCallback((id: string, quantity: number) => {
     if (quantity <= 0) {
@@ -247,6 +285,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         removeFromCart,
         removeSubItem,
         addSubItem,
+        updateSubItemQuantity,
         updateQuantity,
         clearCart,
         getTotalItems,
