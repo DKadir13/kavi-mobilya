@@ -72,6 +72,17 @@ export default function CategoriesPage() {
       .replace(/^-+|-+$/g, '');
   }, []);
 
+  const resetForm = useCallback(() => {
+    setFormData({
+      name: '',
+      slug: '',
+      description: '',
+      order_index: '0',
+    });
+    setEditingCategory(null);
+    setSubmitting(false);
+  }, []);
+
   const handleSubmit = useCallback(
     async (e: React.FormEvent) => {
     e.preventDefault();
@@ -165,7 +176,7 @@ export default function CategoriesPage() {
             });
       }
     },
-    [formData, editingCategory, submitting, generateSlug]
+    [formData, editingCategory, submitting, generateSlug, resetForm]
   );
 
   const handleEdit = useCallback((category: Category) => {

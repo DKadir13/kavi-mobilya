@@ -23,37 +23,51 @@ export default function AdminDashboardPage() {
       // Optimize: Sadece sayıları al, tüm verileri yükleme
       const [products, categories, allSales, monthlySales] =
         await Promise.all([
-          productsApi.getAll(),
-          categoriesApi.getAll(),
-          salesApi.getAll(),
-          salesApi.getAll({ month: currentMonth }),
+          productsApi.getAll().catch(() => []),
+          categoriesApi.getAll().catch(() => []),
+          salesApi.getAll().catch(() => []),
+          salesApi.getAll({ month: currentMonth }).catch(() => []),
         ]);
 
       // Son 5 satışı al - sadece gerekli olanları
-      const sortedRecentSales = allSales
+      const sortedRecentSales = (allSales || [])
         .sort(
           (a: any, b: any) =>
-            new Date(b.created_at || b.sale_date).getTime() -
-            new Date(a.created_at || a.sale_date).getTime()
+            new Date(b.created_at || b.sale_date || 0).getTime() -
+            new Date(a.created_at || a.sale_date || 0).getTime()
         )
         .slice(0, 5)
-        .map((sale: any) => ({
-          _id: sale._id,
-          product_name: sale.product_name || 'Bilinmeyen',
-          sale_price: sale.sale_price,
-          sale_date: sale.sale_date || sale.created_at,
-        }));
+        .map((sale: any) => {
+          // product_id object ise name'i al
+          const productName = sale.product_id && typeof sale.product_id === 'object' 
+            ? sale.product_id.name 
+            : sale.product_name || 'Bilinmeyen';
+          
+          return {
+            _id: sale._id,
+            product_name: productName,
+            sale_price: sale.sale_price || 0,
+            sale_date: sale.sale_date || sale.created_at,
+          };
+        });
 
       setStats({
-        totalProducts: products.length,
-        totalCategories: categories.length,
-        totalSales: allSales.length,
-        monthlySales: monthlySales.length,
+        totalProducts: (products || []).length,
+        totalCategories: (categories || []).length,
+        totalSales: (allSales || []).length,
+        monthlySales: (monthlySales || []).length,
         recentSales: sortedRecentSales,
       });
     } catch (error: any) {
       console.error('Load stats error:', error);
-      // Silent fail - stats will show 0
+      // Hata durumunda boş stats göster
+      setStats({
+        totalProducts: 0,
+        totalCategories: 0,
+        totalSales: 0,
+        monthlySales: 0,
+        recentSales: [],
+      });
     } finally {
       setLoading(false);
     }

@@ -229,6 +229,8 @@ export default function FeaturedProductsPage() {
     }
 
     setSubmitting(true);
+    
+    try {
 
     // Optimistic update - UI'da hemen ekle
     const tempId = `temp-${Date.now()}`;
@@ -251,8 +253,7 @@ export default function FeaturedProductsPage() {
     setSelectedProductId('');
     setSelectedOrder(1);
 
-    // Arka planda API çağrısı
-    try {
+      // Arka planda API çağrısı
       const updatedProduct = await productsApi.update(selectedProductId, {
         is_featured: true,
         featured_order: selectedOrder,

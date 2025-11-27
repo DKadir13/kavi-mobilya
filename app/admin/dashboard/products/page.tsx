@@ -155,6 +155,16 @@ export default function ProductsManagementPage() {
       // İlk resmi image_url olarak kullan (geriye dönük uyumluluk için)
       const mainImage = formData.images.length > 0 ? formData.images[0] : formData.image_url?.trim() || null;
 
+      // category_id'yi string'e çevir (object ise _id'yi al)
+      let categoryIdValue: string | null = null;
+      if (formData.category_id && formData.category_id !== 'none') {
+        if (typeof formData.category_id === 'object') {
+          categoryIdValue = formData.category_id._id || formData.category_id.id || null;
+        } else {
+          categoryIdValue = formData.category_id;
+        }
+      }
+
       const productData = {
           name: formData.name.trim(),
           description: formData.description?.trim() || null,
@@ -162,7 +172,7 @@ export default function ProductsManagementPage() {
           image_url: mainImage,
           images: formData.images.length > 0 ? formData.images : (formData.image_url ? [formData.image_url] : []),
           store_type: formData.store_type as 'home' | 'premium',
-          category_id: formData.category_id === 'none' ? null : formData.category_id || null,
+          category_id: categoryIdValue,
         is_featured: formData.is_featured,
         is_active: formData.is_active,
       };
@@ -170,7 +180,7 @@ export default function ProductsManagementPage() {
       if (editingProduct) {
         // Güncelleme - Optimistic update
         const productId = editingProduct._id || editingProduct.id || '';
-        const category = categories.find(c => (c._id || c.id) === productData.category_id);
+        const category = productData.category_id ? categories.find(c => (c._id || c.id) === productData.category_id) : null;
         
         const optimisticProduct: Product = {
           ...editingProduct,
@@ -222,7 +232,7 @@ export default function ProductsManagementPage() {
       } else {
         // Yeni ürün ekleme - Optimistic update
         const tempId = `temp-${Date.now()}`;
-        const category = categories.find(c => (c._id || c.id) === productData.category_id);
+        const category = productData.category_id ? categories.find(c => (c._id || c.id) === productData.category_id) : null;
         
         const optimisticProduct: Product = {
           _id: tempId,

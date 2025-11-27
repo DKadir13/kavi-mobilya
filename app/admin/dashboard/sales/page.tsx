@@ -272,13 +272,13 @@ export default function SalesPage() {
       const product = products.find(
         (p) => (p._id || p.id) === productId
       );
-    setFormData({
-      ...formData,
-      product_id: productId,
-      sale_price: product?.price?.toString() || '',
-    });
+      setFormData((prev) => ({
+        ...prev,
+        product_id: productId,
+        sale_price: product?.price?.toString() || '',
+      }));
     },
-    [products, formData]
+    [products]
   );
 
   const totalSales = useMemo(
