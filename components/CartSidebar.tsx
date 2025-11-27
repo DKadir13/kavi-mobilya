@@ -197,10 +197,11 @@ export default function CartSidebar({ open, onClose }: CartSidebarProps) {
                     </div>
 
                     {/* Ürün Parçaları (Sub Items) */}
+                    {item.sub_items && item.sub_items.length > 0 ? (
                     <div className="ml-4 pl-4 border-l-2 border-gray-300 space-y-2">
                       <div className="flex items-center justify-between mb-2">
                         <p className="text-xs font-medium text-gray-600">
-                          Ürün Parçaları ({item.sub_items?.length || 0}):
+                          Ürün Parçaları ({item.sub_items.length}):
                         </p>
                         <Button
                           variant="ghost"
@@ -214,83 +215,79 @@ export default function CartSidebar({ open, onClose }: CartSidebarProps) {
                       </div>
                       
                       {/* Mevcut Parçalar */}
-                      {item.sub_items && item.sub_items.length > 0 && (
-                        <>
-                        {item.sub_items.map((subItem) => (
-                          <div
-                            key={subItem.id}
-                            className={`flex items-center gap-2 p-2 rounded-lg ${
-                              subItem.is_optional 
-                                ? 'bg-yellow-50 border border-yellow-200' 
-                                : 'bg-gray-50 border border-gray-200'
-                            }`}
-                          >
-                            <div className="relative w-12 h-12 flex-shrink-0 bg-gray-200 rounded overflow-hidden">
-                              {subItem.image_url ? (
-                                subItem.image_url.startsWith('data:') ? (
-                                  <img
-                                    src={subItem.image_url}
-                                    alt={subItem.name}
-                                    className="w-full h-full object-cover"
-                                  />
-                                ) : (
-                                  <Image
-                                    src={subItem.image_url}
-                                    alt={subItem.name}
-                                    fill
-                                    className="object-cover"
-                                    sizes="48px"
-                                  />
-                                )
+                      {item.sub_items.map((subItem) => (
+                        <div
+                          key={subItem.id}
+                          className={`flex items-center gap-2 p-2 rounded-lg ${
+                            subItem.is_optional 
+                              ? 'bg-yellow-50 border border-yellow-200' 
+                              : 'bg-gray-50 border border-gray-200'
+                          }`}
+                        >
+                          <div className="relative w-12 h-12 flex-shrink-0 bg-gray-200 rounded overflow-hidden">
+                            {subItem.image_url ? (
+                              subItem.image_url.startsWith('data:') ? (
+                                <img
+                                  src={subItem.image_url}
+                                  alt={subItem.name}
+                                  className="w-full h-full object-cover"
+                                />
                               ) : (
-                                <div className="w-full h-full flex items-center justify-center">
-                                  <span className="text-[8px] text-gray-400">Resim yok</span>
-                                </div>
-                              )}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2">
-                                <p className="text-xs font-medium truncate">{subItem.name}</p>
-                                {subItem.is_optional ? (
-                                  <span className="text-[8px] bg-yellow-100 text-yellow-800 px-1.5 py-0.5 rounded font-medium">
-                                    Opsiyonel
-                                  </span>
-                                ) : (
-                                  <span className="text-[8px] bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded font-medium">
-                                    Zorunlu
-                                  </span>
-                                )}
-                              </div>
-                              <div className="flex items-center gap-2 mt-1">
-                                {subItem.price && (
-                                  <p className="text-[10px] font-semibold text-[#a42a2a]">
-                                    {subItem.price.toLocaleString('tr-TR')} TL
-                                  </p>
-                                )}
-                                <span className="text-[10px] text-gray-500">
-                                  {subItem.quantity} adet
-                                </span>
-                              </div>
-                            </div>
-                            {subItem.is_optional ? (
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-7 w-7 text-red-500 hover:text-red-700 hover:bg-red-50 flex-shrink-0"
-                                onClick={() => removeSubItem(item.id, subItem.id)}
-                                title="Parçayı kaldır"
-                              >
-                                <X className="h-4 w-4" />
-                              </Button>
+                                <Image
+                                  src={subItem.image_url}
+                                  alt={subItem.name}
+                                  fill
+                                  className="object-cover"
+                                  sizes="48px"
+                                />
+                              )
                             ) : (
-                              <div className="h-7 w-7 flex items-center justify-center flex-shrink-0">
-                                <span className="text-[8px] text-gray-400">Zorunlu</span>
+                              <div className="w-full h-full flex items-center justify-center">
+                                <span className="text-[8px] text-gray-400">Resim yok</span>
                               </div>
                             )}
                           </div>
-                        ))}
-                        </>
-                      )}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <p className="text-xs font-medium truncate">{subItem.name}</p>
+                              {subItem.is_optional ? (
+                                <span className="text-[8px] bg-yellow-100 text-yellow-800 px-1.5 py-0.5 rounded font-medium">
+                                  Opsiyonel
+                                </span>
+                              ) : (
+                                <span className="text-[8px] bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded font-medium">
+                                  Zorunlu
+                                </span>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-2 mt-1">
+                              {subItem.price && (
+                                <p className="text-[10px] font-semibold text-[#a42a2a]">
+                                  {subItem.price.toLocaleString('tr-TR')} TL
+                                </p>
+                              )}
+                              <span className="text-[10px] text-gray-500">
+                                {subItem.quantity} adet
+                              </span>
+                            </div>
+                          </div>
+                          {subItem.is_optional ? (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7 text-red-500 hover:text-red-700 hover:bg-red-50 flex-shrink-0"
+                              onClick={() => removeSubItem(item.id, subItem.id)}
+                              title="Parçayı kaldır"
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          ) : (
+                            <div className="h-7 w-7 flex items-center justify-center flex-shrink-0">
+                              <span className="text-[8px] text-gray-400">Zorunlu</span>
+                            </div>
+                          )}
+                        </div>
+                      ))}
 
                       {/* Eklenebilecek Diğer Parçalar */}
                       {productSubItems[item.id] && productSubItems[item.id].length > 0 && (
@@ -350,6 +347,7 @@ export default function CartSidebar({ open, onClose }: CartSidebarProps) {
                         </div>
                       )}
                     </div>
+                    ) : null}
                   </div>
                 ))}
               </div>

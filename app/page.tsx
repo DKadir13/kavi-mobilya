@@ -250,7 +250,15 @@ export default function Home() {
             <Link href="/urunler?magaza=home">
               <div className="group relative h-80 rounded-2xl overflow-hidden shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-105 scroll-reveal">
                 <div className="absolute inset-0 bg-gradient-to-br from-gray-800 to-gray-900" />
-                <div className="absolute inset-0 bg-[url('https://images.pexels.com/photos/1350789/pexels-photo-1350789.jpeg?auto=compress&cs=tinysrgb&w=800')] bg-cover bg-center opacity-40 group-hover:opacity-50 transition-opacity" />
+                <div className="absolute inset-0 opacity-40 group-hover:opacity-50 transition-opacity">
+                  <Image
+                    src="/kavi-home.jpeg"
+                    alt="Kavi Home"
+                    fill
+                    className="object-cover"
+                    sizes="(max-width: 768px) 100vw, 50vw"
+                  />
+                </div>
                 <div className="relative h-full flex flex-col items-center justify-center text-white p-8">
                   <Store className="h-16 w-16 mb-4" />
                   <h2 className="text-3xl font-bold mb-2">Kavi Home</h2>
@@ -270,7 +278,15 @@ export default function Home() {
             <Link href="/urunler?magaza=premium">
               <div className="group relative h-80 rounded-2xl overflow-hidden shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-105 scroll-reveal scroll-reveal-delay-1">
                 <div className="absolute inset-0 bg-gradient-to-br from-[#a42a2a] to-[#7a1a1a]" />
-                <div className="absolute inset-0 bg-[url('https://images.pexels.com/photos/1743229/pexels-photo-1743229.jpeg?auto=compress&cs=tinysrgb&w=800')] bg-cover bg-center opacity-30 group-hover:opacity-40 transition-opacity" />
+                <div className="absolute inset-0 opacity-30 group-hover:opacity-40 transition-opacity">
+                  <Image
+                    src="/kavi-premium.jpeg"
+                    alt="Kavi Premium"
+                    fill
+                    className="object-cover"
+                    sizes="(max-width: 768px) 100vw, 50vw"
+                  />
+                </div>
                 <div className="relative h-full flex flex-col items-center justify-center text-white p-8">
                   <Award className="h-16 w-16 mb-4" />
                   <h2 className="text-3xl font-bold mb-2">Kavi Premium</h2>
@@ -286,6 +302,79 @@ export default function Home() {
                 </div>
               </div>
             </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* Galeri Bölümü - yan-yana klasöründeki fotoğraflar */}
+      <section className="py-16 bg-gray-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-12 scroll-reveal">
+            <h2 className="text-3xl font-bold text-[#0a0a0a] mb-4">
+              Galeri
+            </h2>
+            <p className="text-gray-600">
+              Ürünlerimizden kareler
+            </p>
+          </div>
+          
+          {/* yan-yana klasöründeki fotoğraflar - Grid galeri */}
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-12">
+            {[
+              'WhatsApp Image 2025-11-18 at 13.49.43 (1).jpeg',
+              'WhatsApp Image 2025-11-18 at 13.49.43.jpeg',
+              'WhatsApp Image 2025-11-18 at 13.49.44 (1).jpeg',
+              'WhatsApp Image 2025-11-18 at 13.49.44 (2).jpeg',
+              'WhatsApp Image 2025-11-18 at 13.49.44.jpeg',
+              'WhatsApp Image 2025-11-18 at 13.49.47 (1).jpeg',
+              'WhatsApp Image 2025-11-18 at 13.49.47 (2).jpeg',
+              'WhatsApp Image 2025-11-18 at 13.49.47.jpeg',
+              'WhatsApp Image 2025-11-18 at 13.49.48 (1).jpeg',
+              'WhatsApp Image 2025-11-18 at 13.49.48 (2).jpeg',
+              'WhatsApp Image 2025-11-18 at 13.49.48 (3).jpeg',
+              'WhatsApp Image 2025-11-18 at 13.49.48.jpeg',
+              'WhatsApp Image 2025-11-18 at 13.49.49 (1).jpeg',
+              'WhatsApp Image 2025-11-18 at 13.49.49 (2).jpeg',
+              'WhatsApp Image 2025-11-18 at 13.49.49 (3).jpeg',
+              'WhatsApp Image 2025-11-18 at 13.49.49.jpeg',
+              'WhatsApp Image 2025-11-18 at 13.49.50 (1).jpeg',
+              'WhatsApp Image 2025-11-18 at 13.49.50 (2).jpeg',
+              'WhatsApp Image 2025-11-18 at 13.49.50.jpeg',
+              'WhatsApp Image 2025-11-18 at 13.49.51 (1).jpeg',
+              'WhatsApp Image 2025-11-18 at 13.49.51 (2).jpeg',
+              'WhatsApp Image 2025-11-18 at 13.49.51 (3).jpeg',
+              'WhatsApp Image 2025-11-18 at 13.49.51.jpeg',
+              'WhatsApp Image 2025-11-18 at 13.49.52 (1).jpeg',
+              'WhatsApp Image 2025-11-18 at 13.49.52 (2).jpeg',
+              'WhatsApp Image 2025-11-18 at 13.49.52 (3).jpeg',
+              'WhatsApp Image 2025-11-18 at 13.49.52.jpeg',
+              'WhatsApp Image 2025-11-18 at 13.49.53 (1).jpeg',
+              'WhatsApp Image 2025-11-18 at 13.49.53 (2).jpeg',
+              'WhatsApp Image 2025-11-18 at 13.49.53 (3).jpeg',
+              'WhatsApp Image 2025-11-18 at 13.49.53 (4).jpeg',
+              'WhatsApp Image 2025-11-18 at 13.49.53.jpeg',
+              'WhatsApp Image 2025-11-18 at 13.49.54 (1).jpeg',
+              'WhatsApp Image 2025-11-18 at 13.49.54 (2).jpeg',
+              'WhatsApp Image 2025-11-18 at 13.49.54 (3).jpeg',
+              'WhatsApp Image 2025-11-18 at 13.49.54 (4).jpeg',
+              'WhatsApp Image 2025-11-18 at 13.49.54.jpeg',
+              'WhatsApp Image 2025-11-18 at 13.49.55 (1).jpeg',
+              'WhatsApp Image 2025-11-18 at 13.49.55.jpeg',
+            ].map((imageName, index) => (
+              <div
+                key={index}
+                className="group relative aspect-square rounded-lg overflow-hidden shadow-md hover:shadow-xl transition-all duration-300 transform hover:scale-105"
+              >
+                <Image
+                  src={`/yan-yana/${encodeURIComponent(imageName)}`}
+                  alt={`Galeri ${index + 1}`}
+                  fill
+                  className="object-cover group-hover:scale-110 transition-transform duration-300"
+                  sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
+                  loading="lazy"
+                />
+              </div>
+            ))}
           </div>
         </div>
       </section>
