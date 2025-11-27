@@ -145,7 +145,7 @@ export default function Home() {
               <div className="relative h-full w-full">
                 <div className="absolute inset-0 bg-gradient-to-br from-[#0a0a0a] via-[#1a1a1a] to-[#a42a2a]" />
                 <Image
-                  src="https://images.pexels.com/photos/1350789/pexels-photo-1350789.jpeg?auto=compress&cs=tinysrgb&w=1920"
+                  src="/KAPAK1.jpeg"
                   alt="Kavi Mobilya"
                   fill
                   className="object-cover opacity-30"
@@ -217,8 +217,8 @@ export default function Home() {
               <div className="relative h-full w-full">
                 <div className="absolute inset-0 bg-gradient-to-br from-[#1a1a1a] via-[#a42a2a] to-[#0a0a0a]" />
                 <Image
-                  src="https://images.pexels.com/photos/1571460/pexels-photo-1571460.jpeg?auto=compress&cs=tinysrgb&w=1920"
-                  alt="Kavi Mobilya Koleksiyon"
+                  src="/modern.jpeg"
+                  alt="Modern ve Luxury Tasarımlar"
                   fill
                   className="object-cover opacity-30"
                   sizes="100vw"
@@ -226,7 +226,7 @@ export default function Home() {
                 <div className="relative z-10 h-full flex items-center justify-center">
                   <div className="max-w-4xl mx-auto px-4 text-center">
                     <h1 className="text-5xl md:text-6xl font-bold text-white mb-6">
-                      MODERN TASARIMLAR
+                      MODERN VE LUXURY TASARIMLAR
                     </h1>
                     <p className="text-xl md:text-2xl text-gray-200 mb-8">
                       Evinize Uygun Mobilya Çözümleri
