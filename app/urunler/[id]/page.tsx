@@ -75,6 +75,7 @@ export default function ProductDetailPage() {
       image_url: product.image_url,
       category: categoryName || 'Diğer',
       store_type: product.store_type,
+      type: 'product',
     });
   }, [product, addToCart]);
 

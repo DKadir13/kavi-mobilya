@@ -152,6 +152,40 @@ export const salesApi = {
     }),
 };
 
+// Packages API
+export const packagesApi = {
+  getAll: (params?: {
+    store_type?: string;
+    is_featured?: boolean;
+    is_active?: boolean;
+  }) => {
+    const queryParams = new URLSearchParams();
+    if (params?.store_type) queryParams.append('store_type', params.store_type);
+    if (params?.is_featured !== undefined)
+      queryParams.append('is_featured', params.is_featured.toString());
+    if (params?.is_active !== undefined)
+      queryParams.append('is_active', params.is_active.toString());
+
+    const query = queryParams.toString();
+    return fetchApi<any[]>(`/packages${query ? `?${query}` : ''}`);
+  },
+  getById: (id: string) => fetchApi<any>(`/packages/${id}`),
+  create: (data: any) =>
+    fetchApi<any>('/packages', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  update: (id: string, data: any) =>
+    fetchApi<any>(`/packages/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+  delete: (id: string) =>
+    fetchApi<{ message: string }>(`/packages/${id}`, {
+      method: 'DELETE',
+    }),
+};
+
 // Auth API
 export const authApi = {
   login: (email: string, password: string) =>

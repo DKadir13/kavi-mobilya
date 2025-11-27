@@ -113,6 +113,11 @@ export default function AdminLayout({
       icon: Package,
     },
     {
+      href: '/admin/dashboard/packages',
+      label: 'Paketler',
+      icon: Package,
+    },
+    {
       href: '/admin/dashboard/categories',
       label: 'Kategoriler',
       icon: FolderTree,

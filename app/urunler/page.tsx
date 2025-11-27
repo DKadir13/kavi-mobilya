@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { productsApi, categoriesApi } from '@/lib/api';
+import { productsApi, categoriesApi, packagesApi } from '@/lib/api';
 import { useCart } from '@/contexts/CartContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -50,8 +50,25 @@ type Category = {
   slug: string;
 };
 
+type Package = {
+  _id: string;
+  id?: string;
+  name: string;
+  description: string | null;
+  price: number | null;
+  image_url: string | null;
+  store_type: 'home' | 'premium';
+  products?: Array<{
+    _id: string;
+    name: string;
+    image_url: string | null;
+    price: number | null;
+  }>;
+};
+
 export default function ProductsPage() {
   const [allProducts, setAllProducts] = useState<Product[]>([]);
+  const [allPackages, setAllPackages] = useState<Package[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
@@ -101,13 +118,23 @@ export default function ProductsPage() {
         params.store_type = store;
       }
 
-      const data = await productsApi.getAll(params);
-      const formatted = data.map((product: any) => ({
+      const [productsData, packagesData] = await Promise.all([
+        productsApi.getAll(params),
+        packagesApi.getAll({ ...params, is_active: true }).catch(() => []), // Paketler yüklenemezse boş array
+      ]);
+
+      const formatted = productsData.map((product: any) => ({
         ...product,
         id: product._id,
         categories: product.category_id !== null && typeof product.category_id === 'object' ? product.category_id : null,
       }));
       setAllProducts(formatted);
+
+      const formattedPackages = packagesData.map((pkg: any) => ({
+        ...pkg,
+        id: pkg._id,
+      }));
+      setAllPackages(formattedPackages);
       setCurrentPage(1); // Reset to first page when filters change
     } catch (error: any) {
       console.error('Product load error:', error);
@@ -149,7 +176,7 @@ export default function ProductsPage() {
     loadProducts(category || 'all', store || 'all');
   }, [searchParams, loadProducts]);
 
-  // Filtered and sorted products
+  // Filtered and sorted products and packages
   const filteredProducts = useMemo(() => {
     let filtered = [...allProducts];
 
@@ -176,20 +203,57 @@ export default function ProductsPage() {
     return filtered;
   }, [allProducts, debouncedSearch, sortBy]);
 
-  // Paginated products
-  const paginatedProducts = useMemo(() => {
+  const filteredPackages = useMemo(() => {
+    let filtered = [...allPackages];
+
+    // Search filter
+    if (debouncedSearch) {
+      const searchLower = debouncedSearch.toLowerCase();
+      filtered = filtered.filter((pkg) =>
+        pkg.name.toLowerCase().includes(searchLower) ||
+        (pkg.description && pkg.description.toLowerCase().includes(searchLower))
+      );
+    }
+
+    // Sort packages
+    if (sortBy === 'price-asc') {
+      filtered.sort((a, b) => (a.price || 0) - (b.price || 0));
+    } else if (sortBy === 'price-desc') {
+      filtered.sort((a, b) => (b.price || 0) - (a.price || 0));
+    } else if (sortBy === 'name-asc') {
+      filtered.sort((a, b) => a.name.localeCompare(b.name, 'tr'));
+    } else if (sortBy === 'name-desc') {
+      filtered.sort((a, b) => b.name.localeCompare(a.name, 'tr'));
+    }
+
+    return filtered;
+  }, [allPackages, debouncedSearch, sortBy]);
+
+  // Combined items (products + packages) for pagination
+  const allItems = useMemo(() => {
+    const items = [
+      ...filteredProducts.map((p) => ({ ...p, itemType: 'product' as const })),
+      ...filteredPackages.map((p) => ({ ...p, itemType: 'package' as const })),
+    ];
+    return items;
+  }, [filteredProducts, filteredPackages]);
+
+  // Paginated items
+  const paginatedItems = useMemo(() => {
     const startIndex = (currentPage - 1) * PRODUCTS_PER_PAGE;
     const endIndex = startIndex + PRODUCTS_PER_PAGE;
-    return filteredProducts.slice(startIndex, endIndex);
-  }, [filteredProducts, currentPage]);
+    return allItems.slice(startIndex, endIndex);
+  }, [allItems, currentPage]);
 
-  const totalPages = Math.ceil(filteredProducts.length / PRODUCTS_PER_PAGE);
+  const totalPages = useMemo(() => {
+    return Math.ceil(allItems.length / PRODUCTS_PER_PAGE);
+  }, [allItems]);
 
   const handleAddToCart = useCallback((product: Product) => {
     const categoryName = product.category_id !== null && typeof product.category_id === 'object' 
       ? product.category_id?.name 
       : null;
-    
+
     addToCart({
       id: product._id || product.id || '',
       name: product.name,
@@ -197,6 +261,27 @@ export default function ProductsPage() {
       image_url: product.image_url,
       category: categoryName || 'Diğer',
       store_type: product.store_type,
+      type: 'product',
+    });
+  }, [addToCart]);
+
+  const handleAddPackageToCart = useCallback((pkg: Package) => {
+    const packageProducts = (pkg.products || []).map((product) => ({
+      id: product._id,
+      name: product.name,
+      image_url: product.image_url,
+      price: product.price,
+    }));
+
+    addToCart({
+      id: pkg._id || pkg.id || '',
+      name: pkg.name,
+      price: pkg.price,
+      image_url: pkg.image_url,
+      category: 'Paket',
+      store_type: pkg.store_type,
+      type: 'package',
+      packageProducts: packageProducts,
     });
   }, [addToCart]);
 
@@ -292,7 +377,7 @@ export default function ProductsPage() {
 
           {/* Results Count */}
           <div className="text-sm text-gray-600">
-            {filteredProducts.length} ürün bulundu
+            {filteredProducts.length} ürün, {filteredPackages.length} paket bulundu
             {filteredProducts.length > PRODUCTS_PER_PAGE && (
               <span className="ml-2">
                 (Sayfa {currentPage} / {totalPages})
@@ -318,53 +403,122 @@ export default function ProductsPage() {
               </div>
             ))}
           </div>
-        ) : filteredProducts.length === 0 ? (
+        ) : allItems.length === 0 ? (
           <div className="text-center py-16 animate-fade-in">
             <p className="text-gray-500 text-lg">
-              {searchQuery ? 'Arama kriterlerinize uygun ürün bulunamadı.' : 'Seçili filtrelere uygun ürün bulunamadı.'}
+              {searchQuery ? 'Arama kriterlerinize uygun ürün veya paket bulunamadı.' : 'Seçili filtrelere uygun ürün veya paket bulunamadı.'}
             </p>
           </div>
         ) : (
           <>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {paginatedProducts.map((product, index) => (
-                <div
-                  key={product._id || product.id}
-                  className="bg-white rounded-xl overflow-hidden shadow-md hover:shadow-xl transition-all group animate-fade-in-up"
-                  style={{ animationDelay: `${index * 50}ms` }}
-                >
-                <Link href={`/urunler/${product._id || product.id}`}>
-                  <ProductImageCarousel 
-                    product={product}
-                  />
-                </Link>
+              {paginatedItems.map((item, index) => {
+                if (item.itemType === 'package') {
+                  const pkg = item as Package & { itemType: 'package' };
+                  return (
+                    <div
+                      key={pkg._id || pkg.id}
+                      className="bg-white rounded-xl overflow-hidden shadow-md hover:shadow-xl transition-all group animate-fade-in-up border-2 border-blue-200"
+                      style={{ animationDelay: `${index * 50}ms` }}
+                    >
+                      <div className="relative h-64 bg-gray-100">
+                        {pkg.image_url ? (
+                          pkg.image_url.startsWith('data:') ? (
+                            <img
+                              src={pkg.image_url}
+                              alt={pkg.name}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <Image
+                              src={pkg.image_url}
+                              alt={pkg.name}
+                              fill
+                              className="object-cover"
+                              sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
+                            />
+                          )
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-gray-400">
+                            <span>📦 Paket Görseli Yok</span>
+                          </div>
+                        )}
+                        <div className="absolute top-2 right-2 bg-blue-500 text-white px-2 py-1 rounded text-xs font-bold">
+                          PAKET
+                        </div>
+                      </div>
 
-                <div className="p-4">
-                  <Link href={`/urunler/${product._id || product.id}`}>
-                    <h3 className="font-semibold text-lg mb-2 line-clamp-2 hover:text-[#a42a2a] transition-colors">
-                      {product.name}
-                    </h3>
-                  </Link>
-                  <p className="text-sm text-gray-500 mb-2">
-                    {product.category_id !== null && typeof product.category_id === 'object' 
-                      ? product.category_id.name 
-                      : 'Diğer'}
-                  </p>
-                  {product.price && (
-                    <p className="text-[#a42a2a] font-bold text-lg mb-3">
-                      {product.price.toLocaleString('tr-TR')} TL
-                    </p>
-                  )}
-                  <Button
-                    onClick={() => handleAddToCart(product)}
-                    className="w-full bg-[#0a0a0a] hover:bg-[#a42a2a] text-white"
-                  >
-                    <ShoppingCart className="h-4 w-4 mr-2" />
-                    Sepete Ekle
-                  </Button>
-                  </div>
-                </div>
-              ))}
+                      <div className="p-4">
+                        <h3 className="font-semibold text-lg mb-2 line-clamp-2">
+                          📦 {pkg.name}
+                        </h3>
+                        {pkg.description && (
+                          <p className="text-sm text-gray-500 mb-2 line-clamp-2">
+                            {pkg.description}
+                          </p>
+                        )}
+                        {pkg.products && pkg.products.length > 0 && (
+                          <p className="text-xs text-gray-400 mb-2">
+                            {pkg.products.length} ürün içerir
+                          </p>
+                        )}
+                        {pkg.price && (
+                          <p className="text-[#a42a2a] font-bold text-lg mb-3">
+                            {pkg.price.toLocaleString('tr-TR')} TL
+                          </p>
+                        )}
+                        <Button
+                          onClick={() => handleAddPackageToCart(pkg)}
+                          className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+                        >
+                          <ShoppingCart className="h-4 w-4 mr-2" />
+                          Paketi Sepete Ekle
+                        </Button>
+                      </div>
+                    </div>
+                  );
+                } else {
+                  const product = item as Product & { itemType: 'product' };
+                  return (
+                    <div
+                      key={product._id || product.id}
+                      className="bg-white rounded-xl overflow-hidden shadow-md hover:shadow-xl transition-all group animate-fade-in-up"
+                      style={{ animationDelay: `${index * 50}ms` }}
+                    >
+                      <Link href={`/urunler/${product._id || product.id}`}>
+                        <ProductImageCarousel 
+                          product={product}
+                        />
+                      </Link>
+
+                      <div className="p-4">
+                        <Link href={`/urunler/${product._id || product.id}`}>
+                          <h3 className="font-semibold text-lg mb-2 line-clamp-2 hover:text-[#a42a2a] transition-colors">
+                            {product.name}
+                          </h3>
+                        </Link>
+                        <p className="text-sm text-gray-500 mb-2">
+                          {product.category_id !== null && typeof product.category_id === 'object' 
+                            ? product.category_id.name 
+                            : 'Diğer'}
+                        </p>
+                        {product.price && (
+                          <p className="text-[#a42a2a] font-bold text-lg mb-3">
+                            {product.price.toLocaleString('tr-TR')} TL
+                          </p>
+                        )}
+                        <Button
+                          onClick={() => handleAddToCart(product)}
+                          className="w-full bg-[#0a0a0a] hover:bg-[#a42a2a] text-white"
+                        >
+                          <ShoppingCart className="h-4 w-4 mr-2" />
+                          Sepete Ekle
+                        </Button>
+                      </div>
+                    </div>
+                  );
+                }
+              })}
             </div>
 
             {/* Pagination */}
