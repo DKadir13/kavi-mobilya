@@ -57,13 +57,23 @@ export default function ProductsManagementPage() {
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
 
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<{
+    name: string;
+    description: string;
+    price: string;
+    image_url: string;
+    images: string[];
+    store_type: 'home' | 'premium';
+    category_id: string | { _id: string; id?: string } | 'none';
+    is_featured: boolean;
+    is_active: boolean;
+  }>({
     name: '',
     description: '',
     price: '',
     image_url: '',
-    images: [] as string[],
-    store_type: 'home' as 'home' | 'premium',
+    images: [],
+    store_type: 'home',
     category_id: 'none',
     is_featured: false,
     is_active: true,
@@ -158,9 +168,9 @@ export default function ProductsManagementPage() {
       // category_id'yi string'e çevir (object ise _id'yi al)
       let categoryIdValue: string | null = null;
       if (formData.category_id && formData.category_id !== 'none') {
-        if (typeof formData.category_id === 'object') {
+        if (typeof formData.category_id === 'object' && formData.category_id !== null) {
           categoryIdValue = formData.category_id._id || formData.category_id.id || null;
-        } else {
+        } else if (typeof formData.category_id === 'string') {
           categoryIdValue = formData.category_id;
         }
       }
@@ -498,7 +508,11 @@ export default function ProductsManagementPage() {
                 <div className="space-y-2">
                   <Label htmlFor="category">Kategori</Label>
                   <Select
-                    value={formData.category_id || 'none'}
+                    value={
+                      typeof formData.category_id === 'object' && formData.category_id !== null
+                        ? formData.category_id._id || formData.category_id.id || 'none'
+                        : formData.category_id || 'none'
+                    }
                     onValueChange={(value) =>
                       setFormData({ ...formData, category_id: value })
                     }
