@@ -1,5 +1,11 @@
 import mongoose, { Schema } from 'mongoose';
 
+export interface IProductSubItem {
+  product_id: string; // Parça olarak eklenen ürünün ID'si
+  quantity?: number; // Varsayılan adet (opsiyonel)
+  is_optional?: boolean; // Opsiyonel parça mı? (sepette çıkarılabilir)
+}
+
 export interface IProduct {
   _id?: string;
   category_id?: string;
@@ -13,9 +19,19 @@ export interface IProduct {
   is_active: boolean;
   stock_status: 'in_stock' | 'out_of_stock' | 'on_order';
   featured_order?: number;
+  sub_items?: IProductSubItem[]; // Ürünün parçaları (ör: yatak odası takımı = yatak + komodin + gardırop)
   created_at?: Date;
   updated_at?: Date;
 }
+
+const ProductSubItemSchema = new Schema(
+  {
+    product_id: { type: String, required: true, ref: 'Product' },
+    quantity: { type: Number, default: 1 },
+    is_optional: { type: Boolean, default: false }, // Opsiyonel parça mı? (sepette çıkarılabilir)
+  },
+  { _id: false }
+);
 
 const ProductSchema = new Schema(
   {
@@ -34,6 +50,7 @@ const ProductSchema = new Schema(
       default: 'in_stock',
     },
     featured_order: { type: Number },
+    sub_items: { type: [ProductSubItemSchema], default: [] }, // Ürünün parçaları
     created_at: { type: Date, default: Date.now },
     updated_at: { type: Date, default: Date.now },
   },

@@ -61,12 +61,40 @@ export default function ProductDetailPage() {
     }
   };
 
-  const handleAddToCart = useCallback(() => {
+  const handleAddToCart = useCallback(async () => {
     if (!product) return;
 
     const categoryName = product.category_id !== null && typeof product.category_id === 'object' 
       ? product.category_id?.name 
       : null;
+
+    // Sub items'ı yükle
+    let subItems: any[] = [];
+    if ((product as any).sub_items && (product as any).sub_items.length > 0) {
+      try {
+        const { productsApi } = await import('@/lib/api');
+        const subItemProducts = await Promise.all(
+          (product as any).sub_items.map(async (subItem: any) => {
+            try {
+              const subProduct = await productsApi.getById(subItem.product_id);
+              return {
+                id: subProduct._id,
+                name: subProduct.name,
+                image_url: subProduct.image_url,
+                price: subProduct.price,
+                quantity: subItem.quantity || 1,
+                is_optional: subItem.is_optional || false,
+              };
+            } catch {
+              return null;
+            }
+          })
+        );
+        subItems = subItemProducts.filter(item => item !== null);
+      } catch (error) {
+        console.error('Sub items yüklenirken hata:', error);
+      }
+    }
 
     addToCart({
       id: product._id || product.id || '',
@@ -75,7 +103,7 @@ export default function ProductDetailPage() {
       image_url: product.image_url,
       category: categoryName || 'Diğer',
       store_type: product.store_type,
-      type: 'product',
+      sub_items: subItems,
     });
   }, [product, addToCart]);
 

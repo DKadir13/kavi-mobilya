@@ -11,7 +11,7 @@ type CartSidebarProps = {
 };
 
 export default function CartSidebar({ open, onClose }: CartSidebarProps) {
-  const { items, removeFromCart, removeProductFromPackage, updateQuantity, clearCart, generateWhatsAppMessage } = useCart();
+  const { items, removeFromCart, removeSubItem, updateQuantity, clearCart, generateWhatsAppMessage } = useCart();
 
   const handleWhatsAppContact = () => {
     const message = generateWhatsAppMessage();
@@ -86,17 +86,9 @@ export default function CartSidebar({ open, onClose }: CartSidebarProps) {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-start justify-between gap-2">
                           <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2">
-                              <h3 className="font-medium text-sm line-clamp-2">
-                                {item.type === 'package' && '📦 '}
-                                {item.name}
-                              </h3>
-                              {item.type === 'package' && (
-                                <span className="text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded">
-                                  Paket
-                                </span>
-                              )}
-                            </div>
+                            <h3 className="font-medium text-sm line-clamp-2">
+                              {item.name}
+                            </h3>
                             <p className="text-xs text-gray-500 mt-1">
                               {item.store_type === 'premium'
                                 ? 'Kavi Premium'
@@ -149,29 +141,29 @@ export default function CartSidebar({ open, onClose }: CartSidebarProps) {
                       </div>
                     </div>
 
-                    {/* Paket İçindeki Ürünler */}
-                    {item.type === 'package' && item.packageProducts && item.packageProducts.length > 0 && (
-                      <div className="ml-4 pl-4 border-l-2 border-blue-200 space-y-2">
+                    {/* Ürün Parçaları (Sub Items) */}
+                    {item.sub_items && item.sub_items.length > 0 && (
+                      <div className="ml-4 pl-4 border-l-2 border-gray-300 space-y-2">
                         <p className="text-xs font-medium text-gray-600 mb-2">
-                          Paket İçeriği:
+                          Ürün Parçaları:
                         </p>
-                        {item.packageProducts.map((product) => (
+                        {item.sub_items.map((subItem) => (
                           <div
-                            key={product.id}
+                            key={subItem.id}
                             className="flex items-center gap-2 p-2 bg-gray-50 rounded-lg"
                           >
                             <div className="relative w-10 h-10 flex-shrink-0 bg-gray-200 rounded overflow-hidden">
-                              {product.image_url ? (
-                                product.image_url.startsWith('data:') ? (
+                              {subItem.image_url ? (
+                                subItem.image_url.startsWith('data:') ? (
                                   <img
-                                    src={product.image_url}
-                                    alt={product.name}
+                                    src={subItem.image_url}
+                                    alt={subItem.name}
                                     className="w-full h-full object-cover"
                                   />
                                 ) : (
                                   <Image
-                                    src={product.image_url}
-                                    alt={product.name}
+                                    src={subItem.image_url}
+                                    alt={subItem.name}
                                     fill
                                     className="object-cover"
                                     sizes="40px"
@@ -184,22 +176,36 @@ export default function CartSidebar({ open, onClose }: CartSidebarProps) {
                               )}
                             </div>
                             <div className="flex-1 min-w-0">
-                              <p className="text-xs font-medium truncate">{product.name}</p>
-                              {product.price && (
-                                <p className="text-[10px] text-gray-500">
-                                  {product.price.toLocaleString('tr-TR')} TL
-                                </p>
-                              )}
+                              <div className="flex items-center gap-2">
+                                <p className="text-xs font-medium truncate">{subItem.name}</p>
+                                {subItem.is_optional && (
+                                  <span className="text-[8px] bg-yellow-100 text-yellow-800 px-1.5 py-0.5 rounded">
+                                    Opsiyonel
+                                  </span>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-2 mt-0.5">
+                                {subItem.price && (
+                                  <p className="text-[10px] text-gray-500">
+                                    {subItem.price.toLocaleString('tr-TR')} TL
+                                  </p>
+                                )}
+                                <span className="text-[10px] text-gray-400">
+                                  ({subItem.quantity} adet)
+                                </span>
+                              </div>
                             </div>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-6 w-6 text-red-500 hover:text-red-700 hover:bg-red-50"
-                              onClick={() => removeProductFromPackage(item.id, product.id)}
-                              title="Paketten kaldır"
-                            >
-                              <X className="h-3 w-3" />
-                            </Button>
+                            {subItem.is_optional && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-6 w-6 text-red-500 hover:text-red-700 hover:bg-red-50"
+                                onClick={() => removeSubItem(item.id, subItem.id)}
+                                title="Parçayı kaldır"
+                              >
+                                <X className="h-3 w-3" />
+                              </Button>
+                            )}
                           </div>
                         ))}
                       </div>

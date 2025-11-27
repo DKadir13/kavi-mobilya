@@ -39,6 +39,7 @@ type Product = {
   category_id: string | { _id: string; name: string; slug: string } | null;
   is_featured: boolean;
   is_active: boolean;
+  sub_items?: Array<{ product_id: string; quantity: number; is_optional: boolean }>;
 };
 
 type Category = {
@@ -67,6 +68,7 @@ export default function ProductsManagementPage() {
     category_id: string | { _id: string; id?: string } | 'none';
     is_featured: boolean;
     is_active: boolean;
+    sub_items: Array<{ product_id: string; quantity: number; is_optional: boolean }>;
   }>({
     name: '',
     description: '',
@@ -77,6 +79,7 @@ export default function ProductsManagementPage() {
     category_id: 'none',
     is_featured: false,
     is_active: true,
+    sub_items: [],
   });
   const [uploadingImages, setUploadingImages] = useState(false);
   const [imagePreview, setImagePreview] = useState<string[]>([]);
@@ -98,6 +101,7 @@ export default function ProductsManagementPage() {
         name: p.name,
         description: p.description,
         price: p.price,
+        sub_items: p.sub_items || [],
         image_url: p.image_url,
         images: p.images || [],
         store_type: p.store_type,
@@ -137,6 +141,7 @@ export default function ProductsManagementPage() {
       category_id: 'none',
       is_featured: false,
       is_active: true,
+      sub_items: [],
     });
     setImagePreview([]);
     setEditingProduct(null);
@@ -185,6 +190,7 @@ export default function ProductsManagementPage() {
           category_id: categoryIdValue,
         is_featured: formData.is_featured,
         is_active: formData.is_active,
+        sub_items: formData.sub_items || [],
       };
 
       if (editingProduct) {
@@ -315,6 +321,7 @@ export default function ProductsManagementPage() {
       category_id: categoryId || 'none',
       is_featured: product.is_featured,
       is_active: product.is_active,
+      sub_items: (product as any).sub_items || [],
     });
     setImagePreview(productImages);
     setDialogOpen(true);
@@ -681,6 +688,95 @@ export default function ProductsManagementPage() {
                     setFormData({ ...formData, is_active: checked })
                   }
                 />
+              </div>
+
+              {/* Ürün Parçaları (Sub Items) */}
+              <div className="space-y-2 border rounded-lg p-4">
+                <Label>Ürün Parçaları (Örn: Yatak Odası Takımı = Yatak + Komodin + Gardırop)</Label>
+                <div className="space-y-3">
+                  {formData.sub_items.map((subItem, index) => {
+                    const subProduct = products.find(p => (p._id || p.id) === subItem.product_id);
+                    return (
+                      <div key={index} className="flex items-center gap-2 p-3 bg-gray-50 rounded-lg">
+                        <div className="flex-1">
+                          <p className="font-medium text-sm">{subProduct?.name || 'Ürün bulunamadı'}</p>
+                          <div className="flex items-center gap-4 mt-1">
+                            <div className="flex items-center gap-2">
+                              <Label htmlFor={`quantity-${index}`} className="text-xs">Adet:</Label>
+                              <Input
+                                id={`quantity-${index}`}
+                                type="number"
+                                min="1"
+                                value={subItem.quantity}
+                                onChange={(e) => {
+                                  const newSubItems = [...formData.sub_items];
+                                  newSubItems[index].quantity = parseInt(e.target.value) || 1;
+                                  setFormData({ ...formData, sub_items: newSubItems });
+                                }}
+                                className="w-20 h-8 text-sm"
+                              />
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Label htmlFor={`optional-${index}`} className="text-xs">Opsiyonel:</Label>
+                              <Switch
+                                id={`optional-${index}`}
+                                checked={subItem.is_optional}
+                                onCheckedChange={(checked) => {
+                                  const newSubItems = [...formData.sub_items];
+                                  newSubItems[index].is_optional = checked;
+                                  setFormData({ ...formData, sub_items: newSubItems });
+                                }}
+                              />
+                            </div>
+                          </div>
+                        </div>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-red-500 hover:text-red-700"
+                          onClick={() => {
+                            const newSubItems = formData.sub_items.filter((_, i) => i !== index);
+                            setFormData({ ...formData, sub_items: newSubItems });
+                          }}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    );
+                  })}
+                  
+                  <Select
+                    value=""
+                    onValueChange={(productId) => {
+                      if (formData.sub_items.some(item => item.product_id === productId)) {
+                        toast.info('Bu ürün zaten parça olarak eklenmiş');
+                        return;
+                      }
+                      const newSubItems = [...formData.sub_items, {
+                        product_id: productId,
+                        quantity: 1,
+                        is_optional: false,
+                      }];
+                      setFormData({ ...formData, sub_items: newSubItems });
+                      toast.success('Parça eklendi');
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Parça olarak ürün seçin..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {products
+                        .filter(p => (p._id || p.id) !== (editingProduct?._id || editingProduct?.id))
+                        .filter(p => !formData.sub_items.some(item => item.product_id === (p._id || p.id)))
+                        .map((product) => (
+                          <SelectItem key={product._id || product.id} value={product._id || product.id || ''}>
+                            {product.name}
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
 
               <div className="flex gap-2 pt-4">

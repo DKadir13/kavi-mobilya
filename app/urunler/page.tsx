@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { productsApi, categoriesApi, packagesApi } from '@/lib/api';
+import { productsApi, categoriesApi } from '@/lib/api';
 import { useCart } from '@/contexts/CartContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -25,12 +25,6 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from '@/components/ui/pagination';
-import {
-  Tabs,
-  TabsList,
-  TabsTrigger,
-  TabsContent,
-} from '@/components/ui/tabs';
 import { useDebounce } from '@/hooks/useDebounce';
 
 type Product = {
@@ -47,6 +41,11 @@ type Product = {
     name: string;
     slug: string;
   } | null;
+  sub_items?: Array<{
+    product_id: string;
+    quantity: number;
+    is_optional: boolean;
+  }>;
 };
 
 type Category = {
@@ -56,36 +55,15 @@ type Category = {
   slug: string;
 };
 
-type Package = {
-  _id: string;
-  id?: string;
-  name: string;
-  description: string | null;
-  price: number | null;
-  image_url: string | null;
-  store_type: 'home' | 'premium';
-  products?: Array<{
-    _id: string;
-    name: string;
-    image_url: string | null;
-    price: number | null;
-  }>;
-};
-
 export default function ProductsPage() {
   const [allProducts, setAllProducts] = useState<Product[]>([]);
-  const [allPackages, setAllPackages] = useState<Package[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
-  const [packagesLoading, setPackagesLoading] = useState(false);
-  const [packagesLoaded, setPackagesLoaded] = useState(false); // Paketler yüklendi mi?
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [selectedStore, setSelectedStore] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [sortBy, setSortBy] = useState<string>('default');
   const [currentPage, setCurrentPage] = useState<number>(1);
-  const [currentPackagePage, setCurrentPackagePage] = useState<number>(1);
-  const [activeTab, setActiveTab] = useState<'products' | 'packages'>('products');
   const searchParams = useSearchParams();
   const { addToCart } = useCart();
   const debouncedSearch = useDebounce(searchQuery, 300);
@@ -128,13 +106,13 @@ export default function ProductsPage() {
         params.store_type = store;
       }
 
-      // Sadece ürünleri yükle - paketler lazy load edilecek
       const productsData = await productsApi.getAll(params);
 
       const formatted = productsData.map((product: any) => ({
         ...product,
         id: product._id,
-        categories: product.category_id !== null && typeof product.category_id === 'object' ? product.category_id : null,
+        category_id: product.category_id !== null && typeof product.category_id === 'object' ? product.category_id : null,
+        sub_items: product.sub_items || [],
       }));
       setAllProducts(formatted);
       setCurrentPage(1); // Reset to first page when filters change
@@ -155,38 +133,6 @@ export default function ProductsPage() {
     }
   }, [categories]);
 
-  // Paketleri lazy load et - sadece paketler sekmesine tıklandığında yükle
-  const loadPackages = useCallback(async (category: string, store: string) => {
-    if (packagesLoaded) return; // Zaten yüklendiyse tekrar yükleme
-    
-    setPackagesLoading(true);
-    try {
-      const cat = categories.find((c) => c.slug === category);
-      
-      const params: any = { is_active: true };
-      if (category !== 'all' && cat) {
-        // Paketler kategori bazlı değil, sadece store_type'a göre filtrelenir
-      }
-      if (store !== 'all') {
-        params.store_type = store;
-      }
-
-      const packagesData = await packagesApi.getAll(params).catch(() => []);
-
-      const formattedPackages = packagesData.map((pkg: any) => ({
-        ...pkg,
-        id: pkg._id,
-      }));
-      setAllPackages(formattedPackages);
-      setPackagesLoaded(true);
-      setCurrentPackagePage(1);
-    } catch (error: any) {
-      console.error('Package load error:', error);
-      // Silent fail
-    } finally {
-      setPackagesLoading(false);
-    }
-  }, [categories, packagesLoaded]);
 
   useEffect(() => {
     loadCategories();
@@ -211,7 +157,7 @@ export default function ProductsPage() {
     loadProducts(category || 'all', store || 'all');
   }, [searchParams, loadProducts]);
 
-  // Filtered and sorted products and packages
+  // Filtered and sorted products
   const filteredProducts = useMemo(() => {
     let filtered = [...allProducts];
 
@@ -238,32 +184,6 @@ export default function ProductsPage() {
     return filtered;
   }, [allProducts, debouncedSearch, sortBy]);
 
-  const filteredPackages = useMemo(() => {
-    let filtered = [...allPackages];
-
-    // Search filter
-    if (debouncedSearch) {
-      const searchLower = debouncedSearch.toLowerCase();
-      filtered = filtered.filter((pkg) =>
-        pkg.name.toLowerCase().includes(searchLower) ||
-        (pkg.description && pkg.description.toLowerCase().includes(searchLower))
-      );
-    }
-
-    // Sort packages
-    if (sortBy === 'price-asc') {
-      filtered.sort((a, b) => (a.price || 0) - (b.price || 0));
-    } else if (sortBy === 'price-desc') {
-      filtered.sort((a, b) => (b.price || 0) - (a.price || 0));
-    } else if (sortBy === 'name-asc') {
-      filtered.sort((a, b) => a.name.localeCompare(b.name, 'tr'));
-    } else if (sortBy === 'name-desc') {
-      filtered.sort((a, b) => b.name.localeCompare(a.name, 'tr'));
-    }
-
-    return filtered;
-  }, [allPackages, debouncedSearch, sortBy]);
-
   // Paginated products
   const paginatedProducts = useMemo(() => {
     const startIndex = (currentPage - 1) * PRODUCTS_PER_PAGE;
@@ -275,21 +195,38 @@ export default function ProductsPage() {
     return Math.ceil(filteredProducts.length / PRODUCTS_PER_PAGE);
   }, [filteredProducts]);
 
-  // Paginated packages
-  const paginatedPackages = useMemo(() => {
-    const startIndex = (currentPackagePage - 1) * PRODUCTS_PER_PAGE;
-    const endIndex = startIndex + PRODUCTS_PER_PAGE;
-    return filteredPackages.slice(startIndex, endIndex);
-  }, [filteredPackages, currentPackagePage]);
-
-  const totalPackagePages = useMemo(() => {
-    return Math.ceil(filteredPackages.length / PRODUCTS_PER_PAGE);
-  }, [filteredPackages]);
-
-  const handleAddToCart = useCallback((product: Product) => {
+  const handleAddToCart = useCallback(async (product: Product) => {
     const categoryName = product.category_id !== null && typeof product.category_id === 'object' 
       ? product.category_id?.name 
       : null;
+
+    // Sub items'ı yükle
+    let subItems: any[] = [];
+    if (product.sub_items && product.sub_items.length > 0) {
+      try {
+        // Sub items'ın detaylarını al
+        const subItemProducts = await Promise.all(
+          product.sub_items.map(async (subItem) => {
+            try {
+              const subProduct = await productsApi.getById(subItem.product_id);
+              return {
+                id: subProduct._id,
+                name: subProduct.name,
+                image_url: subProduct.image_url,
+                price: subProduct.price,
+                quantity: subItem.quantity || 1,
+                is_optional: subItem.is_optional || false,
+              };
+            } catch {
+              return null;
+            }
+          })
+        );
+        subItems = subItemProducts.filter(item => item !== null);
+      } catch (error) {
+        console.error('Sub items yüklenirken hata:', error);
+      }
+    }
 
     addToCart({
       id: product._id || product.id || '',
@@ -298,27 +235,7 @@ export default function ProductsPage() {
       image_url: product.image_url,
       category: categoryName || 'Diğer',
       store_type: product.store_type,
-      type: 'product',
-    });
-  }, [addToCart]);
-
-  const handleAddPackageToCart = useCallback((pkg: Package) => {
-    const packageProducts = (pkg.products || []).map((product) => ({
-      id: product._id,
-      name: product.name,
-      image_url: product.image_url,
-      price: product.price,
-    }));
-
-    addToCart({
-      id: pkg._id || pkg.id || '',
-      name: pkg.name,
-      price: pkg.price,
-      image_url: pkg.image_url,
-      category: 'Paket',
-      store_type: pkg.store_type,
-      type: 'package',
-      packageProducts: packageProducts,
+      sub_items: subItems,
     });
   }, [addToCart]);
 
@@ -412,37 +329,18 @@ export default function ProductsPage() {
             </Select>
           </div>
 
+          {/* Results Count */}
+          <div className="text-sm text-gray-600 mb-4">
+            {filteredProducts.length} ürün bulundu
+            {filteredProducts.length > PRODUCTS_PER_PAGE && (
+              <span className="ml-2">
+                (Sayfa {currentPage} / {totalProductPages})
+              </span>
+            )}
+          </div>
         </div>
 
-        {/* Tabs for Products and Packages */}
-        <Tabs value={activeTab} onValueChange={(value) => {
-          setActiveTab(value as 'products' | 'packages');
-          if (value === 'packages' && !packagesLoaded) {
-            loadPackages(selectedCategory, selectedStore);
-          }
-        }} className="w-full">
-          <TabsList className="grid w-full max-w-md grid-cols-2 mb-6">
-            <TabsTrigger value="products" className="text-base">
-              Ürünler ({filteredProducts.length})
-            </TabsTrigger>
-            <TabsTrigger value="packages" className="text-base">
-              Paketler ({filteredPackages.length})
-            </TabsTrigger>
-          </TabsList>
-
-          {/* Products Tab */}
-          <TabsContent value="products" className="space-y-6">
-            {/* Results Count */}
-            <div className="text-sm text-gray-600">
-              {filteredProducts.length} ürün bulundu
-              {filteredProducts.length > PRODUCTS_PER_PAGE && (
-                <span className="ml-2">
-                  (Sayfa {currentPage} / {totalProductPages})
-                </span>
-              )}
-            </div>
-
-            {loading ? (
+        {loading ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                 {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
                   <div
@@ -595,184 +493,6 @@ export default function ProductsPage() {
             )}
               </>
             )}
-          </TabsContent>
-
-          {/* Packages Tab */}
-          <TabsContent value="packages" className="space-y-6">
-            {/* Results Count */}
-            <div className="text-sm text-gray-600">
-              {filteredPackages.length} paket bulundu
-              {filteredPackages.length > PRODUCTS_PER_PAGE && (
-                <span className="ml-2">
-                  (Sayfa {currentPackagePage} / {totalPackagePages})
-                </span>
-              )}
-            </div>
-
-            {packagesLoading ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                {[1, 2, 3, 4].map((i) => (
-                  <div
-                    key={i}
-                    className="bg-white rounded-xl overflow-hidden shadow-md animate-fade-in border-2 border-blue-200"
-                    style={{ animationDelay: `${i * 100}ms` }}
-                  >
-                    <div className="h-64 bg-gray-200 animate-pulse" />
-                    <div className="p-4 space-y-3">
-                      <div className="h-6 bg-gray-200 rounded animate-pulse" />
-                      <div className="h-4 bg-gray-200 rounded animate-pulse w-2/3" />
-                      <div className="h-8 bg-gray-200 rounded animate-pulse" />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : filteredPackages.length === 0 ? (
-              <div className="text-center py-16 animate-fade-in">
-                <p className="text-gray-500 text-lg">
-                  {searchQuery ? 'Arama kriterlerinize uygun paket bulunamadı.' : 'Seçili filtrelere uygun paket bulunamadı.'}
-                </p>
-              </div>
-            ) : (
-              <>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                  {paginatedPackages.map((pkg, index) => (
-                    <div
-                      key={pkg._id || pkg.id}
-                      className="bg-white rounded-xl overflow-hidden shadow-md hover:shadow-xl transition-all group animate-fade-in-up border-2 border-blue-200"
-                      style={{ animationDelay: `${index * 50}ms` }}
-                    >
-                      <div className="relative h-64 bg-gray-100">
-                        {pkg.image_url ? (
-                          pkg.image_url.startsWith('data:') ? (
-                            <img
-                              src={pkg.image_url}
-                              alt={pkg.name}
-                              className="w-full h-full object-cover"
-                            />
-                          ) : (
-                            <Image
-                              src={pkg.image_url}
-                              alt={pkg.name}
-                              fill
-                              className="object-cover"
-                              sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
-                            />
-                          )
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center text-gray-400">
-                            <span>📦 Paket Görseli Yok</span>
-                          </div>
-                        )}
-                        <div className="absolute top-2 right-2 bg-blue-500 text-white px-2 py-1 rounded text-xs font-bold">
-                          PAKET
-                        </div>
-                      </div>
-
-                      <div className="p-4">
-                        <h3 className="font-semibold text-lg mb-2 line-clamp-2">
-                          📦 {pkg.name}
-                        </h3>
-                        {pkg.description && (
-                          <p className="text-sm text-gray-500 mb-2 line-clamp-2">
-                            {pkg.description}
-                          </p>
-                        )}
-                        {pkg.products && pkg.products.length > 0 && (
-                          <p className="text-xs text-gray-400 mb-2">
-                            {pkg.products.length} ürün içerir
-                          </p>
-                        )}
-                        {pkg.price && (
-                          <p className="text-[#a42a2a] font-bold text-lg mb-3">
-                            {pkg.price.toLocaleString('tr-TR')} TL
-                          </p>
-                        )}
-                        <Button
-                          onClick={() => handleAddPackageToCart(pkg)}
-                          className="w-full bg-blue-600 hover:bg-blue-700 text-white"
-                        >
-                          <ShoppingCart className="h-4 w-4 mr-2" />
-                          Paketi Sepete Ekle
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Packages Pagination */}
-                {totalPackagePages > 1 && (
-                  <div className="mt-12 flex flex-col items-center gap-4">
-                    <Pagination>
-                      <PaginationContent>
-                        <PaginationItem>
-                          <button
-                            onClick={() => {
-                              if (currentPackagePage > 1) {
-                                setCurrentPackagePage(currentPackagePage - 1);
-                                window.scrollTo({ top: 0, behavior: 'smooth' });
-                              }
-                            }}
-                            disabled={currentPackagePage === 1}
-                            className={`flex items-center gap-1 px-4 py-2 rounded-md border transition-colors ${
-                              currentPackagePage === 1
-                                ? 'opacity-50 cursor-not-allowed'
-                                : 'hover:bg-gray-100 cursor-pointer'
-                            }`}
-                          >
-                            <ChevronLeft className="h-4 w-4" />
-                            <span>Önceki</span>
-                          </button>
-                        </PaginationItem>
-                        
-                        {Array.from({ length: totalPackagePages }, (_, i) => i + 1).map((page) => (
-                          <PaginationItem key={page}>
-                            <button
-                              onClick={() => {
-                                setCurrentPackagePage(page);
-                                window.scrollTo({ top: 0, behavior: 'smooth' });
-                              }}
-                              className={`px-4 py-2 rounded-md border transition-colors ${
-                                currentPackagePage === page
-                                  ? 'bg-[#a42a2a] text-white border-[#a42a2a]'
-                                  : 'hover:bg-gray-100'
-                              }`}
-                            >
-                              {page}
-                            </button>
-                          </PaginationItem>
-                        ))}
-                        
-                        <PaginationItem>
-                          <button
-                            onClick={() => {
-                              if (currentPackagePage < totalPackagePages) {
-                                setCurrentPackagePage(currentPackagePage + 1);
-                                window.scrollTo({ top: 0, behavior: 'smooth' });
-                              }
-                            }}
-                            disabled={currentPackagePage === totalPackagePages}
-                            className={`flex items-center gap-1 px-4 py-2 rounded-md border transition-colors ${
-                              currentPackagePage === totalPackagePages
-                                ? 'opacity-50 cursor-not-allowed'
-                                : 'hover:bg-gray-100 cursor-pointer'
-                            }`}
-                          >
-                            <span>Sonraki</span>
-                            <ChevronRight className="h-4 w-4" />
-                          </button>
-                        </PaginationItem>
-                      </PaginationContent>
-                    </Pagination>
-                    
-                    <div className="text-sm text-gray-600">
-                      Sayfa {currentPackagePage} / {totalPackagePages} - Toplam {filteredPackages.length} paket
-                    </div>
-                  </div>
-                )}
-              </>
-            )}
-          </TabsContent>
-        </Tabs>
       </div>
     </div>
   );

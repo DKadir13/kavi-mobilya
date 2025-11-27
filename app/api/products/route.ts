@@ -42,6 +42,7 @@ export async function GET(request: NextRequest) {
           is_featured: 1,
           is_active: 1,
           featured_order: 1,
+          sub_items: 1,
           created_at: 1,
         }
       }

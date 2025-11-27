@@ -3,6 +3,15 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
 
+export type CartSubItem = {
+  id: string; // Sub item'ın product_id'si
+  name: string;
+  image_url: string | null;
+  price: number | null;
+  quantity: number; // Sub item'ın adedi
+  is_optional: boolean; // Opsiyonel mi? (çıkarılabilir mi?)
+};
+
 export type CartItem = {
   id: string;
   name: string;
@@ -11,20 +20,15 @@ export type CartItem = {
   category: string;
   store_type: 'home' | 'premium';
   quantity: number;
-  type: 'product' | 'package'; // Ürün mü paket mi?
-  packageProducts?: Array<{ // Paket ise içindeki ürünler
-    id: string;
-    name: string;
-    image_url: string | null;
-    price: number | null;
-  }>;
+  sub_items?: CartSubItem[]; // Ürünün parçaları (sub_items)
 };
 
 type CartContextType = {
   items: CartItem[];
   addToCart: (item: Omit<CartItem, 'quantity'>) => void;
   removeFromCart: (id: string) => void;
-  removeProductFromPackage: (packageId: string, productId: string) => void; // Paketten ürün silme
+  removeSubItem: (productId: string, subItemId: string) => void; // Ürünün parçasını çıkar
+  addSubItem: (productId: string, subItem: CartSubItem) => void; // Ürünün parçasını ekle
   updateQuantity: (id: string, quantity: number) => void;
   clearCart: () => void;
   getTotalItems: () => number;
@@ -89,30 +93,57 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     });
   }, []);
 
-  const removeProductFromPackage = useCallback((packageId: string, productId: string) => {
+  const removeSubItem = useCallback((productId: string, subItemId: string) => {
     setItems((prev) => {
-      const packageItem = prev.find((i) => i.id === packageId && i.type === 'package');
-      if (!packageItem || !packageItem.packageProducts) return prev;
+      const productItem = prev.find((i) => i.id === productId);
+      if (!productItem || !productItem.sub_items) return prev;
 
-      const updatedProducts = packageItem.packageProducts.filter((p) => p.id !== productId);
+      const subItem = productItem.sub_items.find((s) => s.id === subItemId);
+      if (!subItem) return prev;
+
+      // Opsiyonel değilse çıkarılamaz
+      if (!subItem.is_optional) {
+        toast.error(`${subItem.name} zorunlu parça, çıkarılamaz`);
+        return prev;
+      }
+
+      const updatedSubItems = productItem.sub_items.filter((s) => s.id !== subItemId);
       
-      // Eğer pakette ürün kalmadıysa paketi de sil
-      if (updatedProducts.length === 0) {
-        toast.success('Paket içindeki tüm ürünler kaldırıldı, paket sepetten çıkarıldı');
-        return prev.filter((i) => i.id !== packageId);
-      }
-
-      // Paketten ürünü kaldır
-      const product = packageItem.packageProducts.find((p) => p.id === productId);
-      if (product) {
-        toast.success(`${product.name} paketten kaldırıldı`);
-      }
+      toast.success(`${subItem.name} üründen kaldırıldı`);
 
       return prev.map((item) =>
-        item.id === packageId
+        item.id === productId
           ? {
               ...item,
-              packageProducts: updatedProducts,
+              sub_items: updatedSubItems,
+            }
+          : item
+      );
+    });
+  }, []);
+
+  const addSubItem = useCallback((productId: string, subItem: CartSubItem) => {
+    setItems((prev) => {
+      const productItem = prev.find((i) => i.id === productId);
+      if (!productItem) return prev;
+
+      const existingSubItems = productItem.sub_items || [];
+      
+      // Zaten ekli mi kontrol et
+      if (existingSubItems.some((s) => s.id === subItem.id)) {
+        toast.info(`${subItem.name} zaten ekli`);
+        return prev;
+      }
+
+      const updatedSubItems = [...existingSubItems, subItem];
+      
+      toast.success(`${subItem.name} ürüne eklendi`);
+
+      return prev.map((item) =>
+        item.id === productId
+          ? {
+              ...item,
+              sub_items: updatedSubItems,
             }
           : item
       );
@@ -149,31 +180,25 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     let message = 'Merhaba, aşağıdaki ürünler hakkında bilgi almak istiyorum:\n\n';
 
     items.forEach((item, index) => {
-      if (item.type === 'package') {
-        message += `${index + 1}. 📦 ${item.name} (Paket)\n`;
-        message += `   Mağaza: ${item.store_type === 'premium' ? 'Kavi Premium' : 'Kavi Home'}\n`;
-        message += `   Adet: ${item.quantity}\n`;
-        if (item.price) {
-          message += `   Paket Fiyatı: ${item.price.toLocaleString('tr-TR')} TL\n`;
-        }
-        if (item.packageProducts && item.packageProducts.length > 0) {
-          message += `   Paket İçeriği:\n`;
-          item.packageProducts.forEach((product, pIndex) => {
-            message += `      ${pIndex + 1}. ${product.name}`;
-            if (product.price) {
-              message += ` - ${product.price.toLocaleString('tr-TR')} TL`;
-            }
-            message += '\n';
-          });
-        }
-      } else {
-        message += `${index + 1}. ${item.name}\n`;
-        message += `   Mağaza: ${item.store_type === 'premium' ? 'Kavi Premium' : 'Kavi Home'}\n`;
-        message += `   Kategori: ${item.category}\n`;
-        message += `   Adet: ${item.quantity}\n`;
-        if (item.price) {
-          message += `   Fiyat: ${item.price.toLocaleString('tr-TR')} TL\n`;
-        }
+      message += `${index + 1}. ${item.name}\n`;
+      message += `   Mağaza: ${item.store_type === 'premium' ? 'Kavi Premium' : 'Kavi Home'}\n`;
+      message += `   Kategori: ${item.category}\n`;
+      message += `   Adet: ${item.quantity}\n`;
+      if (item.price) {
+        message += `   Fiyat: ${item.price.toLocaleString('tr-TR')} TL\n`;
+      }
+      if (item.sub_items && item.sub_items.length > 0) {
+        message += `   Parçalar:\n`;
+        item.sub_items.forEach((subItem, sIndex) => {
+          message += `      ${sIndex + 1}. ${subItem.name} (${subItem.quantity} adet)`;
+          if (subItem.price) {
+            message += ` - ${subItem.price.toLocaleString('tr-TR')} TL`;
+          }
+          if (subItem.is_optional) {
+            message += ' (Opsiyonel)';
+          }
+          message += '\n';
+        });
       }
       message += '\n';
     });
@@ -189,7 +214,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         items,
         addToCart,
         removeFromCart,
-        removeProductFromPackage,
+        removeSubItem,
+        addSubItem,
         updateQuantity,
         clearCart,
         getTotalItems,
