@@ -230,28 +230,29 @@ export default function FeaturedProductsPage() {
 
     setSubmitting(true);
     
-    try {
-
-    // Optimistic update - UI'da hemen ekle
+    // tempId'yi try bloğundan önce tanımla (catch bloğunda kullanılabilmesi için)
     const tempId = `temp-${Date.now()}`;
-    const optimisticProduct: Product = {
-      ...selectedProduct,
-      _id: tempId,
-      id: tempId,
-      is_featured: true,
-      featured_order: selectedOrder,
-    };
     
-    setFeaturedProducts((prev) => [...prev, optimisticProduct].sort((a, b) => 
-      (a.featured_order || 0) - (b.featured_order || 0)
-    ));
-    // allProducts'tan hemen kaldır
-    setAllProducts((prev) => prev.filter((p) => (p._id || p.id) !== selectedProductId));
-    
-    toast.success('Ürün öne çıkan olarak eklendi');
-    setDialogOpen(false);
-    setSelectedProductId('');
-    setSelectedOrder(1);
+    try {
+      // Optimistic update - UI'da hemen ekle
+      const optimisticProduct: Product = {
+        ...selectedProduct,
+        _id: tempId,
+        id: tempId,
+        is_featured: true,
+        featured_order: selectedOrder,
+      };
+      
+      setFeaturedProducts((prev) => [...prev, optimisticProduct].sort((a, b) => 
+        (a.featured_order || 0) - (b.featured_order || 0)
+      ));
+      // allProducts'tan hemen kaldır
+      setAllProducts((prev) => prev.filter((p) => (p._id || p.id) !== selectedProductId));
+      
+      toast.success('Ürün öne çıkan olarak eklendi');
+      setDialogOpen(false);
+      setSelectedProductId('');
+      setSelectedOrder(1);
 
       // Arka planda API çağrısı
       const updatedProduct = await productsApi.update(selectedProductId, {
