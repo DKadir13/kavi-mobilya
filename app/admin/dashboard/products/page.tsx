@@ -392,15 +392,22 @@ export default function ProductsManagementPage() {
     
     // Arka planda silme işlemi
     try {
-      // Eğer yüklenmiş bir dosya ise sunucudan sil (base64 için gerekmez)
-      if (imageUrl.startsWith('/uploads/')) {
+      // Vercel Blob URL'leri için silme işlemi yap
+      // Base64 (data:) URL'ler için silme gerekmez (geriye dönük uyumluluk)
+      if (imageUrl.startsWith('https://') || imageUrl.startsWith('http://')) {
+        // Vercel Blob Store URL'si
+        await fetch(`/api/upload?url=${encodeURIComponent(imageUrl)}`, {
+          method: 'DELETE',
+        });
+      } else if (imageUrl.startsWith('/uploads/')) {
+        // Eski upload klasörü (geriye dönük uyumluluk)
         await fetch(`/api/upload?url=${encodeURIComponent(imageUrl)}`, {
           method: 'DELETE',
         });
       }
-      // Base64 resimler için silme işlemi gerekmez
+      // Base64 (data:) resimler için silme işlemi gerekmez
     } catch (error: any) {
-      // Hata olursa rollback (opsiyonel - base64 için gerekmez)
+      // Hata olursa rollback (opsiyonel)
       console.warn('Image delete error (non-critical):', error);
     }
   }, [formData, imagePreview]);

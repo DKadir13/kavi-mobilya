@@ -13,7 +13,28 @@ Vercel deployment için MongoDB Atlas'ta IP whitelist ayarlarını yapmanız ger
 
 Bu ayar, Vercel'in dinamik IP adreslerinden bağlantıya izin verir.
 
-## 2. Vercel Environment Variables
+## 2. Vercel Blob Store Kurulumu
+
+### 2.1 Blob Store Oluşturma
+
+1. Vercel dashboard'a gidin: https://vercel.com
+2. Projenizi seçin
+3. **Storage** sekmesine gidin
+4. **"Create Database"** veya **"Add Storage"** butonuna tıklayın
+5. **"Blob"** seçeneğini seçin
+6. Blob store adını girin (örn: `kavi-mobilya-blob`)
+7. Region seçin (örn: `IAD1` - Washington D.C.)
+8. **"Create"** butonuna tıklayın
+
+### 2.2 Blob Store Token Alma
+
+Blob store oluşturulduktan sonra, Vercel otomatik olarak `BLOB_READ_WRITE_TOKEN` environment variable'ını ekler. Eğer eklenmemişse:
+
+1. Blob store sayfasında **"Settings"** sekmesine gidin
+2. **"Tokens"** bölümünden token'ı kopyalayın
+3. Environment variables'a ekleyin (aşağıdaki adımları takip edin)
+
+## 3. Vercel Environment Variables
 
 Vercel dashboard'da şu environment variable'ları ekleyin:
 
@@ -21,7 +42,10 @@ Vercel dashboard'da şu environment variable'ları ekleyin:
 
 ```
 MONGODB_URI=mongodb+srv://kavihomemobilya_db_user:Vy4tGlPZgjkGPFth@cluster0.rpfuter.mongodb.net/kavi_mobilya?retryWrites=true&w=majority&appName=Cluster0
+BLOB_READ_WRITE_TOKEN=vercel_blob_rw_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 ```
+
+**Not:** `BLOB_READ_WRITE_TOKEN` genellikle Vercel tarafından otomatik olarak eklenir. Eğer eklenmemişse manuel olarak eklemeniz gerekir.
 
 ### Vercel'de Environment Variable Ekleme:
 
@@ -29,12 +53,12 @@ MONGODB_URI=mongodb+srv://kavihomemobilya_db_user:Vy4tGlPZgjkGPFth@cluster0.rpfu
 2. Projenizi seçin
 3. **Settings** > **Environment Variables** bölümüne gidin
 4. **"Add New"** butonuna tıklayın
-5. **Name**: `MONGODB_URI`
-6. **Value**: MongoDB connection string'inizi yapıştırın
+5. **Name**: `MONGODB_URI` veya `BLOB_READ_WRITE_TOKEN`
+6. **Value**: İlgili değeri yapıştırın
 7. **Environment**: Production, Preview, Development (hepsini seçin)
 8. **"Save"** butonuna tıklayın
 
-## 3. Vercel Deployment Adımları
+## 4. Vercel Deployment Adımları
 
 ### GitHub ile Deploy:
 
@@ -65,11 +89,11 @@ vercel
 vercel --prod
 ```
 
-## 4. Build Ayarları
+## 5. Build Ayarları
 
 Vercel otomatik olarak Next.js projelerini algılar ve build eder. Ekstra bir ayar gerekmez.
 
-## 5. Post-Deployment Kontrolleri
+## 6. Post-Deployment Kontrolleri
 
 Deployment sonrası kontrol edin:
 
@@ -78,7 +102,7 @@ Deployment sonrası kontrol edin:
 3. ✅ Admin paneli çalışıyor mu?
 4. ✅ Ürünler ve kategoriler yükleniyor mu?
 
-## 6. Troubleshooting
+## 7. Troubleshooting
 
 ### MongoDB Bağlantı Hatası:
 - MongoDB Atlas IP whitelist'te `0.0.0.0/0` olduğundan emin olun
@@ -89,7 +113,12 @@ Deployment sonrası kontrol edin:
 - `package.json` dosyasında tüm dependencies'in olduğundan emin olun
 - Vercel build logs'unu kontrol edin
 
-## 7. Notlar
+### Blob Store Hatası:
+- Blob store'un oluşturulduğundan emin olun
+- `BLOB_READ_WRITE_TOKEN` environment variable'ının doğru eklendiğini kontrol edin
+- Vercel logs'u kontrol edin: Vercel Dashboard > Project > Deployments > [Latest] > Functions
+
+## 8. Notlar
 
 - Vercel'de environment variables production, preview ve development için ayrı ayrı ayarlanabilir
 - MongoDB Atlas'ta `0.0.0.0/0` ayarı production için güvenli değildir, ancak development için kullanılabilir

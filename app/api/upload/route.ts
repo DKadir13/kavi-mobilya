@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { put, del } from '@vercel/blob';
 
 // Sharp'ı dynamic import ile yükle (runtime hatası önlemek için)
 let sharp: any = null;
@@ -48,6 +49,7 @@ export async function POST(request: NextRequest) {
         // Resmi sıkıştır ve optimize et
         let optimizedBuffer: Buffer;
         let mimeType = 'image/jpeg';
+        let fileExtension = 'jpg';
 
         if (sharp) {
           try {
@@ -68,24 +70,40 @@ export async function POST(request: NextRequest) {
               .toBuffer();
 
             mimeType = 'image/jpeg';
+            fileExtension = 'jpg';
           } catch (sharpError: any) {
             console.warn(`Sharp processing failed for ${file.name}, using original:`, sharpError.message);
             optimizedBuffer = buffer;
             mimeType = file.type;
+            // Dosya uzantısını belirle
+            if (file.type === 'image/png') fileExtension = 'png';
+            else if (file.type === 'image/webp') fileExtension = 'webp';
+            else if (file.type === 'image/jpeg' || file.type === 'image/jpg') fileExtension = 'jpg';
+            else fileExtension = 'jpg'; // default
           }
         } else {
           // Sharp yoksa orijinal buffer'ı kullan
           optimizedBuffer = buffer;
           mimeType = file.type;
+          // Dosya uzantısını belirle
+          if (file.type === 'image/png') fileExtension = 'png';
+          else if (file.type === 'image/webp') fileExtension = 'webp';
+          else if (file.type === 'image/jpeg' || file.type === 'image/jpg') fileExtension = 'jpg';
+          else fileExtension = 'jpg'; // default
         }
 
-        // Base64'e çevir
-        const base64String = optimizedBuffer.toString('base64');
+        // Benzersiz dosya adı oluştur
+        const timestamp = Date.now();
+        const randomString = Math.random().toString(36).substring(2, 15);
+        const fileName = `products/${timestamp}-${randomString}.${fileExtension}`;
+
+        // Vercel Blob Store'a yükle
+        const blob = await put(fileName, optimizedBuffer, {
+          access: 'public',
+          contentType: mimeType,
+        });
         
-        // Data URL formatında oluştur
-        const dataUrl = `data:${mimeType};base64,${base64String}`;
-        
-        uploadedFiles.push(dataUrl);
+        uploadedFiles.push(blob.url);
       } catch (fileError: any) {
         console.error(`File upload error for ${file.name}:`, fileError);
         errors.push(`${file.name}: ${fileError.message || 'Yükleme hatası'}`);
@@ -117,11 +135,34 @@ export async function POST(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   try {
-    // Base64 resimler MongoDB'de saklandığı için silme işlemi gerekmez
-    return NextResponse.json({ 
-      success: true, 
-      message: 'Base64 resimler ürünle birlikte saklandığı için ayrı silme gerekmez' 
-    });
+    const { searchParams } = new URL(request.url);
+    const url = searchParams.get('url');
+
+    if (!url) {
+      return NextResponse.json({ 
+        error: 'Silinecek dosya URL\'si belirtilmedi' 
+      }, { status: 400 });
+    }
+
+    // Vercel Blob Store'dan sil
+    try {
+      await del(url);
+      return NextResponse.json({ 
+        success: true, 
+        message: 'Dosya başarıyla silindi' 
+      });
+    } catch (deleteError: any) {
+      // Eğer dosya zaten yoksa veya başka bir hata varsa
+      console.warn('Blob delete error:', deleteError);
+      // Base64 URL'ler için (eski veriler) hata verme
+      if (url.startsWith('data:')) {
+        return NextResponse.json({ 
+          success: true, 
+          message: 'Base64 resimler için silme işlemi gerekmez' 
+        });
+      }
+      throw deleteError;
+    }
   } catch (error: any) {
     console.error('Delete error:', error);
     return NextResponse.json({ 
