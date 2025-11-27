@@ -259,19 +259,9 @@ export default function CartSidebar({ open, onClose }: CartSidebarProps) {
                                 size="icon"
                                 className="h-7 w-7"
                                 onClick={() => {
-                                  if (subItem.quantity <= 1) {
-                                    // Opsiyonel ise 0 yap, zorunlu ise kaldır
-                                    if (subItem.is_optional) {
-                                      updateSubItemQuantity(item.id, subItem.id, 0);
-                                    } else {
-                                      removeSubItem(item.id, subItem.id);
-                                    }
-                                  } else {
-                                    // Sayı 1'den fazlaysa azalt
-                                    updateSubItemQuantity(item.id, subItem.id, subItem.quantity - 1);
-                                  }
+                                  const newQuantity = Math.max(0, subItem.quantity - 1);
+                                  updateSubItemQuantity(item.id, subItem.id, newQuantity);
                                 }}
-                                disabled={!subItem.is_optional && subItem.quantity <= 1}
                                 title="Azalt"
                               >
                                 <Minus className="h-4 w-4" />
@@ -299,7 +289,7 @@ export default function CartSidebar({ open, onClose }: CartSidebarProps) {
                                 onClick={() => removeSubItem(item.id, subItem.id)}
                                 title="Parçayı tamamen kaldır"
                               >
-                                <X className="h-4 w-4" />
+                                <Trash2 className="h-4 w-4" />
                               </Button>
                             )}
                           </div>

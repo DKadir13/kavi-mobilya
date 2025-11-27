@@ -3,9 +3,9 @@
 import { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { productsApi } from '@/lib/api';
-import { useCart } from '@/contexts/CartContext';
+import { useCart, CartSubItem } from '@/contexts/CartContext';
 import { Button } from '@/components/ui/button';
-import { ShoppingCart, ArrowLeft, MessageCircle, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ShoppingCart, ArrowLeft, MessageCircle, ChevronLeft, ChevronRight, Plus, Minus, Trash2 } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 
@@ -48,6 +48,7 @@ export default function ProductDetailPage() {
   const router = useRouter();
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
+  const [selectedSubItems, setSelectedSubItems] = useState<CartSubItem[]>([]);
   const { addToCart } = useCart();
 
   useEffect(() => {
@@ -72,6 +73,41 @@ export default function ProductDetailPage() {
       };
 
       setProduct(formatted);
+
+      // Sub items'ı yükle ve başlangıç değerlerini ayarla
+      if (formatted.sub_items && formatted.sub_items.length > 0) {
+        const subItemProducts = await Promise.all(
+          formatted.sub_items.map(async (subItem: any) => {
+            if (subItem.product_id) {
+              try {
+                const subProduct = await productsApi.getById(subItem.product_id);
+                return {
+                  id: subProduct._id,
+                  name: subProduct.name,
+                  image_url: subProduct.image_url,
+                  price: subProduct.price,
+                  quantity: subItem.quantity ?? 0,
+                  is_optional: subItem.is_optional || false,
+                };
+              } catch {
+                return null;
+              }
+            } else if (subItem.name) {
+              return {
+                id: subItem.name,
+                name: subItem.name,
+                image_url: subItem.image_url || null,
+                price: subItem.price || null,
+                quantity: subItem.quantity ?? 0,
+                is_optional: subItem.is_optional || false,
+              };
+            }
+            return null;
+          })
+        );
+        const validSubItems = subItemProducts.filter(item => item !== null) as CartSubItem[];
+        setSelectedSubItems(validSubItems);
+      }
     } catch (error) {
       router.push('/urunler');
     } finally {
@@ -86,48 +122,8 @@ export default function ProductDetailPage() {
       ? product.category_id?.name 
       : null;
 
-    // Sub items'ı yükle
-    let subItems: any[] = [];
-    if ((product as any).sub_items && (product as any).sub_items.length > 0) {
-      try {
-        const { productsApi } = await import('@/lib/api');
-        const subItemProducts = await Promise.all(
-          (product as any).sub_items.map(async (subItem: any) => {
-            // Eğer product_id varsa mevcut ürünü çek
-            if (subItem.product_id) {
-              try {
-                const subProduct = await productsApi.getById(subItem.product_id);
-                return {
-                  id: subProduct._id,
-                  name: subProduct.name,
-                  image_url: subProduct.image_url,
-                  price: subProduct.price,
-                  quantity: subItem.quantity ?? 1,
-                  is_optional: subItem.is_optional || false,
-                };
-              } catch {
-                return null;
-              }
-            } else if (subItem.name) {
-              // Yeni parça (name, description, price, image_url ile)
-              // Name'i ID olarak kullan (tutarlılık için)
-              return {
-                id: subItem.name, // Name'i ID olarak kullan
-                name: subItem.name,
-                image_url: subItem.image_url || null,
-                price: subItem.price || null,
-                quantity: subItem.quantity || 1,
-                is_optional: subItem.is_optional || false,
-              };
-            }
-            return null;
-          })
-        );
-        subItems = subItemProducts.filter(item => item !== null);
-      } catch (error) {
-        console.error('Sub items yüklenirken hata:', error);
-      }
-    }
+    // Sadece quantity > 0 olan parçaları ekle
+    const subItems = selectedSubItems.filter(item => item.quantity > 0);
 
     addToCart({
       id: product._id || product.id || '',
@@ -138,7 +134,21 @@ export default function ProductDetailPage() {
       store_type: product.store_type,
       sub_items: subItems,
     });
-  }, [product, addToCart]);
+  }, [product, selectedSubItems, addToCart]);
+
+  const updateSubItemQuantity = useCallback((subItemId: string, quantity: number) => {
+    setSelectedSubItems(prev => 
+      prev.map(item => 
+        item.id === subItemId 
+          ? { ...item, quantity: Math.max(0, quantity) }
+          : item
+      )
+    );
+  }, []);
+
+  const removeSubItem = useCallback((subItemId: string) => {
+    setSelectedSubItems(prev => prev.filter(item => item.id !== subItemId));
+  }, []);
 
   const handleWhatsAppContact = useCallback(() => {
     if (!product) return;
@@ -226,6 +236,79 @@ export default function ProductDetailPage() {
                 <p className="text-gray-700 leading-relaxed">
                   {product.description}
                 </p>
+              </div>
+            )}
+
+            {/* Ürün Parçaları */}
+            {selectedSubItems.length > 0 && (
+              <div className="bg-white p-6 rounded-xl shadow-md space-y-4">
+                <h3 className="font-bold text-lg mb-4">Ürün Parçaları</h3>
+                <div className="space-y-3">
+                  {selectedSubItems.map((subItem) => (
+                    <div
+                      key={subItem.id}
+                      className={`flex items-center justify-between gap-3 p-3 rounded-lg border ${
+                        subItem.is_optional 
+                          ? 'bg-yellow-50 border-yellow-200' 
+                          : 'bg-gray-50 border-gray-200'
+                      }`}
+                    >
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <p className="text-sm font-medium truncate">{subItem.name}</p>
+                          {subItem.is_optional && (
+                            <span className="text-[10px] bg-yellow-100 text-yellow-800 px-1.5 py-0.5 rounded font-medium">
+                              Opsiyonel
+                            </span>
+                          )}
+                        </div>
+                        {subItem.price && (
+                          <p className="text-xs text-gray-600 mt-1">
+                            {subItem.price.toLocaleString('tr-TR')} TL
+                          </p>
+                        )}
+                      </div>
+                      
+                      <div className="flex items-center gap-2">
+                        <div className="flex items-center border rounded-lg">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => updateSubItemQuantity(subItem.id, subItem.quantity - 1)}
+                            title="Azalt"
+                          >
+                            <Minus className="h-4 w-4" />
+                          </Button>
+                          <span className="px-3 text-sm font-medium min-w-[2.5rem] text-center">
+                            {subItem.quantity}
+                          </span>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => updateSubItemQuantity(subItem.id, subItem.quantity + 1)}
+                            title="Artır"
+                          >
+                            <Plus className="h-4 w-4" />
+                          </Button>
+                        </div>
+                        
+                        {subItem.is_optional && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-50"
+                            onClick={() => removeSubItem(subItem.id)}
+                            title="Parçayı kaldır"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
 
