@@ -69,6 +69,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   }, [items]);
 
   const addToCart = useCallback((item: Omit<CartItem, 'quantity'>) => {
+    console.log('Adding to cart:', item);
+    console.log('Sub items:', item.sub_items);
     setItems((prev) => {
       const existing = prev.find((i) => i.id === item.id);
       if (existing) {
@@ -78,16 +80,18 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
             ? { 
                 ...i, 
                 quantity: i.quantity + 1,
-                // Eğer yeni item'da sub_items varsa ve mevcut item'da yoksa, yeni sub_items'ı kullan
+                // Eğer yeni item'da sub_items varsa, yeni sub_items'ı kullan (mevcut olanı koruma)
                 sub_items: item.sub_items && item.sub_items.length > 0 
                   ? item.sub_items 
                   : i.sub_items
               } 
             : i
         );
+        console.log('Updated cart item:', updated.find(i => i.id === item.id));
         toast.success(`${item.name} sepete eklendi`);
         return updated;
       }
+      console.log('New cart item with sub_items:', { ...item, quantity: 1 });
       toast.success(`${item.name} sepete eklendi`);
       return [...prev, { ...item, quantity: 1 }];
     });

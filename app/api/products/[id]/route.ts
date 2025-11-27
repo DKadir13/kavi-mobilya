@@ -10,7 +10,7 @@ export async function GET(
   try {
     await connectDB();
     const product: any = await Product.findById(params.id)
-      .select('name description price image_url images store_type category_id is_featured is_active featured_order created_at')
+      .select('name description price image_url images store_type category_id is_featured is_active featured_order sub_items created_at')
       .lean();
     if (!product) {
       return NextResponse.json({ error: 'Ürün bulunamadı' }, { status: 404 });

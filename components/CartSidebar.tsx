@@ -197,6 +197,11 @@ export default function CartSidebar({ open, onClose }: CartSidebarProps) {
                     </div>
 
                     {/* Ürün Parçaları (Sub Items) - Her zaman göster */}
+                    {(() => {
+                      console.log('Cart item:', item);
+                      console.log('Cart item sub_items:', item.sub_items);
+                      return null;
+                    })()}
                     <div className="ml-4 pl-4 border-l-2 border-gray-300 space-y-2">
                       <div className="flex items-center justify-between mb-2">
                         <p className="text-xs font-medium text-gray-600">
@@ -215,9 +220,9 @@ export default function CartSidebar({ open, onClose }: CartSidebarProps) {
                       
                       {/* Mevcut Parçalar */}
                       {item.sub_items && item.sub_items.length > 0 ? (
-                        item.sub_items.map((subItem) => (
+                        item.sub_items.map((subItem, idx) => (
                         <div
-                          key={subItem.id}
+                          key={subItem.id || `sub-${idx}`}
                           className={`flex items-center gap-2 p-2 rounded-lg ${
                             subItem.is_optional 
                               ? 'bg-yellow-50 border border-yellow-200' 
