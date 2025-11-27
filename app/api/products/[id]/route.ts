@@ -9,8 +9,15 @@ export async function GET(
 ) {
   try {
     await connectDB();
+    // sub_items'ı sadece gerektiğinde yükle (query parametresi ile kontrol)
+    const { searchParams } = new URL(request.url);
+    const includeSubItems = searchParams.get('include_sub_items') === 'true';
+    
+    const selectFields = 'name description price image_url images store_type category_id is_featured is_active featured_order created_at' + 
+      (includeSubItems ? ' sub_items' : '');
+    
     const product: any = await Product.findById(params.id)
-      .select('name description price image_url images store_type category_id is_featured is_active featured_order sub_items created_at')
+      .select(selectFields)
       .lean();
     if (!product) {
       return NextResponse.json({ error: 'Ürün bulunamadı' }, { status: 404 });

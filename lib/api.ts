@@ -110,7 +110,8 @@ export const productsApi = {
     return fetchApi<any[]>(`/products${query ? `?${query}` : ''}`);
   },
   getFeatured: () => fetchApi<any[]>('/products/featured'),
-  getById: (id: string) => fetchApi<any>(`/products/${id}`),
+  getById: (id: string, includeSubItems: boolean = false) => 
+    fetchApi<any>(`/products/${id}${includeSubItems ? '?include_sub_items=true' : ''}`),
   create: (data: any) =>
     fetchApi<any>('/products', {
       method: 'POST',

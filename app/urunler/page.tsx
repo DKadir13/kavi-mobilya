@@ -125,7 +125,7 @@ export default function ProductsPage() {
         ...product,
         id: product._id,
         category_id: product.category_id !== null && typeof product.category_id === 'object' ? product.category_id : null,
-        sub_items: product.sub_items || [],
+        // sub_items'ı public sayfada yükleme (performans için)
       }));
       setAllProducts(formatted);
       setCurrentPage(1); // Reset to first page when filters change
@@ -213,17 +213,17 @@ export default function ProductsPage() {
       ? product.category_id?.name 
       : null;
 
-    // Sub items'ı yükle
+    // Sub items'ı yükle (sadece product_id olanlar için API çağrısı yap)
     let subItems: any[] = [];
     if (product.sub_items && product.sub_items.length > 0) {
       try {
-        // Sub items'ın detaylarını al
+        // Sub items'ın detaylarını al (paralel yükleme)
         const subItemProducts = await Promise.all(
           product.sub_items.map(async (subItem) => {
-            // Eğer product_id varsa mevcut ürünü çek
+            // Eğer product_id varsa mevcut ürünü çek (sub_items olmadan - daha hızlı)
             if (subItem.product_id) {
               try {
-                const subProduct = await productsApi.getById(subItem.product_id);
+                const subProduct = await productsApi.getById(subItem.product_id, false);
                 return {
                   id: subProduct._id,
                   name: subProduct.name,
@@ -243,7 +243,7 @@ export default function ProductsPage() {
                 name: subItem.name,
                 image_url: subItem.image_url || null,
                 price: subItem.price || null,
-                quantity: subItem.quantity || 1,
+                quantity: subItem.quantity ?? 1,
                 is_optional: subItem.is_optional || false,
               };
             }

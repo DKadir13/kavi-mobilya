@@ -25,6 +25,8 @@ export async function GET(request: NextRequest) {
     // allowDiskUse: true - Büyük sort işlemleri için disk kullanımına izin ver
     // Aggregation pipeline kullanarak allowDiskUse desteği
     // Not: Limit'i 500'e düşürdük (memory limit sorununu önlemek için)
+    // sub_items'ı sadece admin panel için yükle (is_active parametresi varsa)
+    const includeSubItems = is_active !== undefined || is_featured !== undefined;
     const products: any[] = await Product.aggregate([
       { $match: query },
       { $sort: { created_at: -1 } },
@@ -42,7 +44,7 @@ export async function GET(request: NextRequest) {
           is_featured: 1,
           is_active: 1,
           featured_order: 1,
-          sub_items: 1,
+          ...(includeSubItems ? { sub_items: 1 } : {}), // Sadece admin panel için sub_items
           created_at: 1,
         }
       }
@@ -87,8 +89,14 @@ export async function GET(request: NextRequest) {
 
     const response = NextResponse.json(productsWithCategories);
     
-    // Cache for 60 seconds
-    response.headers.set('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=120');
+    // Cache for 5 minutes (public) or no cache (admin panel)
+    if (is_active !== undefined || is_featured !== undefined) {
+      // Admin panel için cache yok
+      response.headers.set('Cache-Control', 'no-store, must-revalidate');
+    } else {
+      // Public için cache
+      response.headers.set('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=600');
+    }
     
     return response;
   } catch (error: any) {

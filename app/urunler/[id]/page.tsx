@@ -59,7 +59,8 @@ export default function ProductDetailPage() {
 
   const loadProduct = async (id: string) => {
     try {
-      const data = await productsApi.getById(id);
+      // Sub items ile birlikte yükle (detay sayfasında gerekli)
+      const data = await productsApi.getById(id, true);
 
       if (!data) {
         router.push('/urunler');
@@ -74,37 +75,40 @@ export default function ProductDetailPage() {
 
       setProduct(formatted);
 
-      // Sub items'ı yükle ve başlangıç değerlerini ayarla
+      // Sub items'ı lazy load yap (sadece varsa ve gerektiğinde)
       if (formatted.sub_items && formatted.sub_items.length > 0) {
-        const subItemProducts = await Promise.all(
-          formatted.sub_items.map(async (subItem: any) => {
-            if (subItem.product_id) {
-              try {
-                const subProduct = await productsApi.getById(subItem.product_id);
-                return {
-                  id: subProduct._id,
-                  name: subProduct.name,
-                  image_url: subProduct.image_url,
-                  price: subProduct.price,
-                  quantity: subItem.quantity ?? 0,
-                  is_optional: subItem.is_optional || false,
-                };
-              } catch {
-                return null;
-              }
-            } else if (subItem.name) {
+        // Sub items'ı paralel yükle ama sadece product_id olanları
+        const subItemPromises = formatted.sub_items.map(async (subItem: any) => {
+          if (subItem.product_id) {
+            try {
+              // Sub item'ı sub_items olmadan yükle (daha hızlı - nested sub_items'ı yükleme)
+              const subProduct = await productsApi.getById(subItem.product_id, false);
               return {
-                id: subItem.name,
-                name: subItem.name,
-                image_url: subItem.image_url || null,
-                price: subItem.price || null,
+                id: subProduct._id,
+                name: subProduct.name,
+                image_url: subProduct.image_url,
+                price: subProduct.price,
                 quantity: subItem.quantity ?? 0,
                 is_optional: subItem.is_optional || false,
               };
+            } catch {
+              return null;
             }
-            return null;
-          })
-        );
+          } else if (subItem.name) {
+            return {
+              id: subItem.name,
+              name: subItem.name,
+              image_url: subItem.image_url || null,
+              price: subItem.price || null,
+              quantity: subItem.quantity ?? 0,
+              is_optional: subItem.is_optional || false,
+            };
+          }
+          return null;
+        });
+        
+        // Paralel yükleme için Promise.all kullan
+        const subItemProducts = await Promise.all(subItemPromises);
         const validSubItems = subItemProducts.filter(item => item !== null) as CartSubItem[];
         setSelectedSubItems(validSubItems);
       }
