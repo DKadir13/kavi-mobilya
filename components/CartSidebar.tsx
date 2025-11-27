@@ -232,67 +232,40 @@ export default function CartSidebar({ open, onClose }: CartSidebarProps) {
                         item.sub_items.map((subItem, idx) => (
                         <div
                           key={subItem.id || `sub-${idx}`}
-                          className={`flex items-center gap-2 p-2 rounded-lg ${
+                          className={`flex items-center justify-between gap-2 p-2 rounded-lg ${
                             subItem.is_optional 
                               ? 'bg-yellow-50 border border-yellow-200' 
                               : 'bg-gray-50 border border-gray-200'
                           }`}
                         >
-                          <div className="relative w-12 h-12 flex-shrink-0 bg-gray-200 rounded overflow-hidden">
-                            {subItem.image_url ? (
-                              subItem.image_url.startsWith('data:') ? (
-                                <img
-                                  src={subItem.image_url}
-                                  alt={subItem.name}
-                                  className="w-full h-full object-cover"
-                                />
-                              ) : (
-                                <Image
-                                  src={subItem.image_url}
-                                  alt={subItem.name}
-                                  fill
-                                  className="object-cover"
-                                  sizes="48px"
-                                />
-                              )
-                            ) : (
-                              <div className="w-full h-full flex items-center justify-center">
-                                <span className="text-[8px] text-gray-400">Resim yok</span>
-                              </div>
-                            )}
-                          </div>
+                          {/* Parça İsmi */}
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2">
-                              <p className="text-xs font-medium truncate">{subItem.name}</p>
-                              {subItem.is_optional ? (
-                                <span className="text-[8px] bg-yellow-100 text-yellow-800 px-1.5 py-0.5 rounded font-medium">
+                              <p className="text-sm font-medium truncate">{subItem.name}</p>
+                              {subItem.is_optional && (
+                                <span className="text-[10px] bg-yellow-100 text-yellow-800 px-1.5 py-0.5 rounded font-medium">
                                   Opsiyonel
                                 </span>
-                              ) : (
-                                <span className="text-[8px] bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded font-medium">
-                                  Zorunlu
-                                </span>
-                              )}
-                            </div>
-                            <div className="flex items-center gap-2 mt-1">
-                              {subItem.price && (
-                                <p className="text-[10px] font-semibold text-[#a42a2a]">
-                                  {subItem.price.toLocaleString('tr-TR')} TL
-                                </p>
                               )}
                             </div>
                           </div>
-                          <div className="flex items-center gap-1">
+                          
+                          {/* Sayı Kontrolü ve Silme */}
+                          <div className="flex items-center gap-2">
                             {/* Parça Sayısı Kontrolü */}
                             <div className="flex items-center border rounded-lg">
                               <Button
                                 variant="ghost"
                                 size="icon"
-                                className="h-6 w-6"
+                                className="h-7 w-7"
                                 onClick={() => {
                                   if (subItem.quantity <= 1) {
-                                    // Sayı 1 ise direkt kaldır
-                                    removeSubItem(item.id, subItem.id);
+                                    // Opsiyonel ise 0 yap, zorunlu ise kaldır
+                                    if (subItem.is_optional) {
+                                      updateSubItemQuantity(item.id, subItem.id, 0);
+                                    } else {
+                                      removeSubItem(item.id, subItem.id);
+                                    }
                                   } else {
                                     // Sayı 1'den fazlaysa azalt
                                     updateSubItemQuantity(item.id, subItem.id, subItem.quantity - 1);
@@ -301,31 +274,32 @@ export default function CartSidebar({ open, onClose }: CartSidebarProps) {
                                 disabled={!subItem.is_optional && subItem.quantity <= 1}
                                 title="Azalt"
                               >
-                                <Minus className="h-3 w-3" />
+                                <Minus className="h-4 w-4" />
                               </Button>
-                              <span className="px-2 text-xs font-medium min-w-[2rem] text-center">
+                              <span className="px-3 text-sm font-medium min-w-[2.5rem] text-center">
                                 {subItem.quantity}
                               </span>
                               <Button
                                 variant="ghost"
                                 size="icon"
-                                className="h-6 w-6"
+                                className="h-7 w-7"
                                 onClick={() => updateSubItemQuantity(item.id, subItem.id, subItem.quantity + 1)}
                                 title="Artır"
                               >
-                                <Plus className="h-3 w-3" />
+                                <Plus className="h-4 w-4" />
                               </Button>
                             </div>
-                            {/* Silme Butonu (Sadece Opsiyonel ve sayı 1'den fazlaysa göster) */}
-                            {subItem.is_optional && subItem.quantity > 1 && (
+                            
+                            {/* Tamamen Silme Butonu (Sadece Opsiyonel) */}
+                            {subItem.is_optional && (
                               <Button
                                 variant="ghost"
                                 size="icon"
-                                className="h-6 w-6 text-red-500 hover:text-red-700 hover:bg-red-50 flex-shrink-0"
+                                className="h-7 w-7 text-red-500 hover:text-red-700 hover:bg-red-50 flex-shrink-0"
                                 onClick={() => removeSubItem(item.id, subItem.id)}
                                 title="Parçayı tamamen kaldır"
                               >
-                                <X className="h-3 w-3" />
+                                <X className="h-4 w-4" />
                               </Button>
                             )}
                           </div>

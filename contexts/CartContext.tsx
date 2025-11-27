@@ -192,9 +192,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const updateSubItemQuantity = useCallback((productId: string, subItemId: string, quantity: number) => {
-    if (quantity <= 0) {
-      // Quantity 0 veya negatifse parçayı çıkar (opsiyonel ise)
-      removeSubItem(productId, subItemId);
+    if (quantity < 0) {
+      // Negatifse hiçbir şey yapma
       return;
     }
 
@@ -202,6 +201,26 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       const productItem = prev.find((i) => i.id === productId);
       if (!productItem || !productItem.sub_items) return prev;
 
+      // Quantity 0 ise parçayı listeden çıkar
+      if (quantity === 0) {
+        const updatedSubItems = productItem.sub_items.filter((subItem) => subItem.id !== subItemId);
+        
+        // Eğer tüm parçalar çıkarıldıysa, ana ürünü de sepetten kaldır
+        if (updatedSubItems.length === 0) {
+          return prev.filter((i) => i.id !== productId);
+        }
+
+        return prev.map((item) =>
+          item.id === productId
+            ? {
+                ...item,
+                sub_items: updatedSubItems,
+              }
+            : item
+        );
+      }
+
+      // Quantity pozitifse güncelle
       const updatedSubItems = productItem.sub_items.map((subItem) =>
         subItem.id === subItemId
           ? { ...subItem, quantity }
@@ -217,7 +236,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
           : item
       );
     });
-  }, [removeSubItem]);
+  }, []);
 
   const updateQuantity = useCallback((id: string, quantity: number) => {
     if (quantity <= 0) {
