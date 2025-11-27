@@ -3,15 +3,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
 
-export type PackageItem = {
-  id: string;
-  name: string;
-  price: number | null;
-  image_url: string | null;
-  category: string;
-  store_type: 'home' | 'premium';
-};
-
 export type CartItem = {
   id: string;
   name: string;
@@ -20,16 +11,12 @@ export type CartItem = {
   category: string;
   store_type: 'home' | 'premium';
   quantity: number;
-  type: 'product' | 'package';
-  packageItems?: PackageItem[]; // Sadece paketlerde olacak
 };
 
 type CartContextType = {
   items: CartItem[];
-  addToCart: (item: Omit<CartItem, 'quantity' | 'type'>) => void;
-  addPackageToCart: (packageName: string, packageItems: PackageItem[]) => void;
+  addToCart: (item: Omit<CartItem, 'quantity'>) => void;
   removeFromCart: (id: string) => void;
-  removeItemFromPackage: (packageId: string, itemId: string) => void;
   updateQuantity: (id: string, quantity: number) => void;
   clearCart: () => void;
   getTotalItems: () => number;
@@ -47,13 +34,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed)) {
-          // Geriye dönük uyumluluk: type field'ı yoksa 'product' olarak ekle
-          const normalized = parsed.map((item: any) => ({
-            ...item,
-            type: item.type || 'product',
-            packageItems: item.packageItems || undefined,
-          }));
-          setItems(normalized);
+          setItems(parsed);
         }
       }
     } catch (error) {
@@ -75,51 +56,18 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     }
   }, [items]);
 
-  const addToCart = useCallback((item: Omit<CartItem, 'quantity' | 'type'>) => {
+  const addToCart = useCallback((item: Omit<CartItem, 'quantity'>) => {
     setItems((prev) => {
-      const existing = prev.find((i) => i.id === item.id && i.type === 'product');
+      const existing = prev.find((i) => i.id === item.id);
       if (existing) {
         const updated = prev.map((i) =>
-          i.id === item.id && i.type === 'product' ? { ...i, quantity: i.quantity + 1 } : i
+          i.id === item.id ? { ...i, quantity: i.quantity + 1 } : i
         );
         toast.success(`${item.name} sepete eklendi`);
         return updated;
       }
       toast.success(`${item.name} sepete eklendi`);
-      return [...prev, { ...item, quantity: 1, type: 'product' }];
-    });
-  }, []);
-
-  const addPackageToCart = useCallback((packageName: string, packageItems: PackageItem[]) => {
-    if (packageItems.length === 0) {
-      toast.error('Pakete en az bir ürün eklemelisiniz');
-      return;
-    }
-
-    const packageId = `package-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-    
-    // Paket için ilk ürünün görselini kullan
-    const firstItem = packageItems[0];
-    const packagePrice = packageItems.reduce((sum, item) => sum + (item.price || 0), 0);
-    
-    // Mağaza tipi: tüm ürünler aynı mağazada olmalı (veya karışık)
-    const storeType = packageItems[0]?.store_type || 'home';
-
-    const packageItem: CartItem = {
-      id: packageId,
-      name: packageName,
-      price: packagePrice,
-      image_url: firstItem.image_url,
-      category: 'Paket',
-      store_type: storeType,
-      quantity: 1,
-      type: 'package',
-      packageItems: packageItems,
-    };
-
-    setItems((prev) => {
-      toast.success(`${packageName} paketi sepete eklendi (${packageItems.length} ürün)`);
-      return [...prev, packageItem];
+      return [...prev, { ...item, quantity: 1 }];
     });
   }, []);
 
@@ -130,36 +78,6 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         toast.success(`${item.name} sepetten kaldırıldı`);
       }
       return prev.filter((i) => i.id !== id);
-    });
-  }, []);
-
-  const removeItemFromPackage = useCallback((packageId: string, itemId: string) => {
-    setItems((prev) => {
-      return prev.map((item) => {
-        if (item.id === packageId && item.type === 'package' && item.packageItems) {
-          const updatedPackageItems = item.packageItems.filter((pi) => pi.id !== itemId);
-          
-          if (updatedPackageItems.length === 0) {
-            // Paket boşaldıysa paketi sil
-            toast.success('Paket boşaldı, sepetten kaldırıldı');
-            return null;
-          }
-          
-          // Paket fiyatını güncelle
-          const updatedPrice = updatedPackageItems.reduce((sum, pi) => sum + (pi.price || 0), 0);
-          const removedItem = item.packageItems?.find((pi) => pi.id === itemId);
-          
-          toast.success(`${removedItem?.name || 'Ürün'} paketten kaldırıldı`);
-          
-          return {
-            ...item,
-            packageItems: updatedPackageItems,
-            price: updatedPrice,
-            image_url: updatedPackageItems[0]?.image_url || item.image_url,
-          };
-        }
-        return item;
-      }).filter((item) => item !== null) as CartItem[];
     });
   }, []);
 
@@ -193,32 +111,12 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     let message = 'Merhaba, aşağıdaki ürünler hakkında bilgi almak istiyorum:\n\n';
 
     items.forEach((item, index) => {
-      if (item.type === 'package' && item.packageItems && item.packageItems.length > 0) {
-        // Paket gösterimi
-        message += `${index + 1}. 📦 ${item.name} (PAKET)\n`;
-        message += `   Mağaza: ${item.store_type === 'premium' ? 'Kavi Premium' : 'Kavi Home'}\n`;
-        message += `   Adet: ${item.quantity}\n`;
-        if (item.price) {
-          message += `   Toplam Fiyat: ${item.price.toLocaleString('tr-TR')} TL\n`;
-        }
-        message += `   Paket İçeriği (${item.packageItems.length} ürün):\n`;
-        item.packageItems.forEach((pkgItem, pkgIndex) => {
-          message += `      ${pkgIndex + 1}. ${pkgItem.name}\n`;
-          message += `         Mağaza: ${pkgItem.store_type === 'premium' ? 'Kavi Premium' : 'Kavi Home'}\n`;
-          message += `         Kategori: ${pkgItem.category}\n`;
-          if (pkgItem.price) {
-            message += `         Fiyat: ${pkgItem.price.toLocaleString('tr-TR')} TL\n`;
-          }
-        });
-      } else {
-        // Normal ürün gösterimi
-        message += `${index + 1}. ${item.name}\n`;
-        message += `   Mağaza: ${item.store_type === 'premium' ? 'Kavi Premium' : 'Kavi Home'}\n`;
-        message += `   Kategori: ${item.category}\n`;
-        message += `   Adet: ${item.quantity}\n`;
-        if (item.price) {
-          message += `   Fiyat: ${item.price.toLocaleString('tr-TR')} TL\n`;
-        }
+      message += `${index + 1}. ${item.name}\n`;
+      message += `   Mağaza: ${item.store_type === 'premium' ? 'Kavi Premium' : 'Kavi Home'}\n`;
+      message += `   Kategori: ${item.category}\n`;
+      message += `   Adet: ${item.quantity}\n`;
+      if (item.price) {
+        message += `   Fiyat: ${item.price.toLocaleString('tr-TR')} TL\n`;
       }
       message += '\n';
     });
@@ -233,9 +131,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       value={{
         items,
         addToCart,
-        addPackageToCart,
         removeFromCart,
-        removeItemFromPackage,
         updateQuantity,
         clearCart,
         getTotalItems,

@@ -11,35 +11,20 @@ export class ApiError extends Error {
 
 async function fetchApi<T>(
   endpoint: string,
-  options?: RequestInit & { skipCache?: boolean },
+  options?: RequestInit,
   retries: number = 1
 ): Promise<T> {
   const controller = new AbortController();
-  // Admin panel için daha kısa timeout ve cache bypass
-  const isAdminPanel = typeof window !== 'undefined' && window.location.pathname.startsWith('/admin');
-  const timeout = isAdminPanel ? 5000 : 10000;
-  const timeoutId = setTimeout(() => controller.abort(), timeout);
-  const skipCache = options?.skipCache !== false && (isAdminPanel || options?.method !== 'GET');
+  const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 saniye timeout
 
   try {
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-      ...(options?.headers as Record<string, string>),
-    };
-
-    // Cache bypass için headers ekle
-    if (skipCache) {
-      headers['Cache-Control'] = 'no-cache, no-store, must-revalidate';
-      headers['Pragma'] = 'no-cache';
-      headers['Expires'] = '0';
-    }
-
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
       ...options,
       signal: controller.signal,
-      headers,
-      // Next.js fetch cache bypass
-      cache: skipCache ? 'no-store' : 'default',
+      headers: {
+        'Content-Type': 'application/json',
+        ...options?.headers,
+      },
     });
 
     clearTimeout(timeoutId);
@@ -163,34 +148,6 @@ export const salesApi = {
     }),
   delete: (id: string) =>
     fetchApi<{ message: string }>(`/sales/${id}`, {
-      method: 'DELETE',
-    }),
-};
-
-// Packages API
-export const packagesApi = {
-  getAll: (params?: { store_type?: string; is_active?: boolean }) => {
-    const queryParams = new URLSearchParams();
-    if (params?.store_type) queryParams.append('store_type', params.store_type);
-    if (params?.is_active !== undefined)
-      queryParams.append('is_active', params.is_active.toString());
-
-    const query = queryParams.toString();
-    return fetchApi<any[]>(`/packages${query ? `?${query}` : ''}`);
-  },
-  getById: (id: string) => fetchApi<any>(`/packages/${id}`),
-  create: (data: any) =>
-    fetchApi<any>('/packages', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    }),
-  update: (id: string, data: any) =>
-    fetchApi<any>(`/packages/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify(data),
-    }),
-  delete: (id: string) =>
-    fetchApi<{ message: string }>(`/packages/${id}`, {
       method: 'DELETE',
     }),
 };

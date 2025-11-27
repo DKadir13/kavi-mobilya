@@ -82,12 +82,7 @@ export async function POST(request: NextRequest) {
 
     const category = await Category.create(categoryData);
     
-    const response = NextResponse.json(category, { status: 201 });
-    // Admin panel için cache bypass
-    response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
-    response.headers.set('Pragma', 'no-cache');
-    response.headers.set('Expires', '0');
-    return response;
+    return NextResponse.json(category, { status: 201 });
   } catch (error: any) {
     console.error('Categories POST API Error:', error);
     

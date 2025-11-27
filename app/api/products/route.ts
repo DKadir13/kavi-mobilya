@@ -67,9 +67,8 @@ export async function GET(request: NextRequest) {
 
     const response = NextResponse.json(productsWithCategories);
     
-    // Cache for 60 seconds (public pages), but admin panel will bypass
+    // Cache for 60 seconds
     response.headers.set('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=120');
-    response.headers.set('X-Content-Type-Options', 'nosniff');
     
     return response;
   } catch (error: any) {
@@ -101,13 +100,7 @@ export async function POST(request: NextRequest) {
     await connectDB();
     const body = await request.json();
     const product = await Product.create(body);
-    
-    const response = NextResponse.json(product, { status: 201 });
-    // Admin panel için cache bypass
-    response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
-    response.headers.set('Pragma', 'no-cache');
-    response.headers.set('Expires', '0');
-    return response;
+    return NextResponse.json(product, { status: 201 });
   } catch (error: any) {
     console.error('Products API Error:', error);
     return NextResponse.json(
