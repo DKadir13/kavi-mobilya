@@ -16,6 +16,7 @@ export default function CartSidebar({ open, onClose }: CartSidebarProps) {
   const { items, removeFromCart, removeSubItem, addSubItem, updateSubItemQuantity, updateQuantity, clearCart, generateWhatsAppMessage } = useCart();
   const [productSubItems, setProductSubItems] = useState<Record<string, any[]>>({});
   const [loadingSubItems, setLoadingSubItems] = useState<Record<string, boolean>>({});
+  const [hiddenSubItems, setHiddenSubItems] = useState<Record<string, Set<string>>>({});
 
   const handleWhatsAppContact = () => {
     const message = generateWhatsAppMessage();
@@ -73,6 +74,14 @@ export default function CartSidebar({ open, onClose }: CartSidebarProps) {
 
   const handleAddSubItem = (productId: string, subItem: any) => {
     addSubItem(productId, subItem);
+  };
+
+  const handleHideSubItem = (productId: string, subItemId: string) => {
+    setHiddenSubItems((prev) => {
+      const hidden = prev[productId] || new Set();
+      hidden.add(subItemId);
+      return { ...prev, [productId]: hidden };
+    });
   };
 
   if (!open) return null;
@@ -334,7 +343,13 @@ export default function CartSidebar({ open, onClose }: CartSidebarProps) {
                             Eklenebilecek Parçalar:
                           </p>
                           {productSubItems[item.id]
-                            .filter(subItem => !item.sub_items?.some(si => si.id === subItem.id))
+                            .filter(subItem => {
+                              // Zaten eklenmiş parçaları gösterme
+                              if (item.sub_items?.some(si => si.id === subItem.id)) return false;
+                              // Gizlenmiş parçaları gösterme
+                              if (hiddenSubItems[item.id]?.has(subItem.id)) return false;
+                              return true;
+                            })
                             .map((availableSubItem) => (
                               <div
                                 key={availableSubItem.id}
@@ -371,15 +386,26 @@ export default function CartSidebar({ open, onClose }: CartSidebarProps) {
                                     </p>
                                   )}
                                 </div>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-6 w-6 text-green-600 hover:text-green-700 hover:bg-green-100 flex-shrink-0"
-                                  onClick={() => handleAddSubItem(item.id, availableSubItem)}
-                                  title="Parçayı ekle"
-                                >
-                                  <Plus className="h-3 w-3" />
-                                </Button>
+                                <div className="flex items-center gap-1">
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-6 w-6 text-green-600 hover:text-green-700 hover:bg-green-100 flex-shrink-0"
+                                    onClick={() => handleAddSubItem(item.id, availableSubItem)}
+                                    title="Parçayı ekle"
+                                  >
+                                    <Plus className="h-3 w-3" />
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-6 w-6 text-gray-400 hover:text-gray-600 hover:bg-gray-100 flex-shrink-0"
+                                    onClick={() => handleHideSubItem(item.id, availableSubItem.id)}
+                                    title="Listeden gizle"
+                                  >
+                                    <X className="h-3 w-3" />
+                                  </Button>
+                                </div>
                               </div>
                             ))}
                         </div>
