@@ -109,6 +109,12 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
       const updatedSubItems = productItem.sub_items.filter((s) => s.id !== subItemId);
       
+      // Eğer tüm parçalar çıkarıldıysa, ana ürünü de sepetten kaldır
+      if (updatedSubItems.length === 0) {
+        toast.success(`${subItem.name} kaldırıldı. Tüm parçalar çıkarıldığı için ${productItem.name} de sepetten kaldırıldı.`);
+        return prev.filter((i) => i.id !== productId);
+      }
+      
       toast.success(`${subItem.name} üründen kaldırıldı`);
 
       return prev.map((item) =>
