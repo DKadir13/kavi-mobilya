@@ -369,73 +369,84 @@ export default function ProductsPage() {
         </div>
 
         {loading ? (
+          <div className="flex flex-col items-center justify-center py-20">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#a42a2a] mb-4"></div>
+            <p className="text-lg font-medium text-gray-700">Ürünler yükleniyor, lütfen bekleyin...</p>
+          </div>
+        ) : (
+          <>
+            {paginatedProducts.length > 0 ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+                {paginatedProducts.map((product) => (
                   <div
-                    key={i}
-                    className="bg-white rounded-xl overflow-hidden shadow-md animate-fade-in"
-                    style={{ animationDelay: `${i * 100}ms` }}
+                    key={product._id || product.id}
+                    className="bg-white rounded-xl overflow-hidden shadow-md hover:shadow-xl transition-shadow"
                   >
-                    <div className="h-64 bg-gray-200 animate-pulse" />
-                    <div className="p-4 space-y-3">
-                      <div className="h-6 bg-gray-200 rounded animate-pulse" />
-                      <div className="h-4 bg-gray-200 rounded animate-pulse w-2/3" />
-                      <div className="h-8 bg-gray-200 rounded animate-pulse" />
+                    <div className="relative h-64 bg-gray-100">
+                      {product.image_url ? (
+                        product.image_url.startsWith('data:') ? (
+                          <img
+                            src={product.image_url}
+                            alt={product.name}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <Image
+                            src={product.image_url}
+                            alt={product.name}
+                            fill
+                            className="object-cover"
+                            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                            loading="lazy"
+                          />
+                        )
+                      ) : (
+                        <div className="h-full flex items-center justify-center text-gray-400">
+                          Resim yok
+                        </div>
+                      )}
+                    </div>
+                    <div className="p-4">
+                      <h3 className="font-semibold text-lg mb-2 line-clamp-2">{product.name}</h3>
+                      <p className="text-sm text-gray-500 mb-2">
+                        {product.category_id !== null && typeof product.category_id === 'object'
+                          ? product.category_id.name
+                          : 'Kategori yok'}
+                      </p>
+                      <p className="text-sm text-gray-500 mb-2">
+                        {product.store_type === 'premium' ? 'Kavi Premium' : 'Kavi Home'}
+                      </p>
+                      {product.price && (
+                        <p className="text-[#a42a2a] font-bold text-lg mb-4">
+                          {product.price.toLocaleString('tr-TR')} TL
+                        </p>
+                      )}
+                      <Button
+                        onClick={() => handleAddToCart(product)}
+                        className="w-full bg-[#0a0a0a] hover:bg-[#a42a2a] text-white"
+                      >
+                        <ShoppingCart className="h-4 w-4 mr-2" />
+                        Sepete Ekle
+                      </Button>
+                      <Link href={`/urunler/${product._id || product.id}`}>
+                        <Button variant="outline" className="w-full mt-2">
+                          Detayları Gör
+                        </Button>
+                      </Link>
                     </div>
                   </div>
                 ))}
               </div>
-            ) : filteredProducts.length === 0 ? (
-              <div className="text-center py-16 animate-fade-in">
-                <p className="text-gray-500 text-lg">
-                  {searchQuery ? 'Arama kriterlerinize uygun ürün bulunamadı.' : 'Seçili filtrelere uygun ürün bulunamadı.'}
-                </p>
-              </div>
             ) : (
-              <>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                  {paginatedProducts.map((product, index) => (
-                    <div
-                      key={product._id || product.id}
-                      className="bg-white rounded-xl overflow-hidden shadow-md hover:shadow-xl transition-all group animate-fade-in-up"
-                      style={{ animationDelay: `${index * 50}ms` }}
-                    >
-                      <Link href={`/urunler/${product._id || product.id}`}>
-                        <ProductImageCarousel 
-                          product={product}
-                        />
-                      </Link>
+              <div className="text-center py-12">
+                <p className="text-gray-500 text-lg">Ürün bulunamadı</p>
+              </div>
+            )}
+          </>
+        )}
 
-                      <div className="p-4">
-                        <Link href={`/urunler/${product._id || product.id}`}>
-                          <h3 className="font-semibold text-lg mb-2 line-clamp-2 hover:text-[#a42a2a] transition-colors">
-                            {product.name}
-                          </h3>
-                        </Link>
-                        <p className="text-sm text-gray-500 mb-2">
-                          {product.category_id !== null && typeof product.category_id === 'object' 
-                            ? product.category_id.name 
-                            : 'Diğer'}
-                        </p>
-                        {product.price && (
-                          <p className="text-[#a42a2a] font-bold text-lg mb-3">
-                            {product.price.toLocaleString('tr-TR')} TL
-                          </p>
-                        )}
-                        <Button
-                          onClick={() => handleAddToCart(product)}
-                          className="w-full bg-[#0a0a0a] hover:bg-[#a42a2a] text-white"
-                        >
-                          <ShoppingCart className="h-4 w-4 mr-2" />
-                          Sepete Ekle
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Products Pagination */}
-                {totalProductPages > 1 && (
+        {/* Products Pagination */}
+        {!loading && totalProductPages > 1 && (
               <div className="mt-12 flex flex-col items-center gap-4">
                 <Pagination>
                   <PaginationContent>

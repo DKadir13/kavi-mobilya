@@ -857,7 +857,10 @@ export default function ProductsManagementPage() {
 
       <div className="bg-white rounded-lg shadow overflow-hidden">
         {loading ? (
-          <div className="p-8 text-center text-gray-500">Yükleniyor...</div>
+          <div className="flex flex-col items-center justify-center py-20">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#a42a2a] mb-4"></div>
+            <p className="text-lg font-medium text-gray-700">Ürünler yükleniyor, lütfen bekleyin...</p>
+          </div>
         ) : filteredProducts.length === 0 ? (
           <div className="p-8 text-center text-gray-500">Ürün bulunamadı</div>
         ) : (

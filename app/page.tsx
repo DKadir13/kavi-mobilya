@@ -192,8 +192,8 @@ export default function Home() {
               <div className="relative h-full w-full">
                 <div className="absolute inset-0 bg-gradient-to-br from-[#a42a2a] via-[#1a1a1a] to-[#0a0a0a]" />
                 <Image
-                  src="https://images.pexels.com/photos/1743229/pexels-photo-1743229.jpeg?auto=compress&cs=tinysrgb&w=1920"
-                  alt="Kavi Mobilya Premium"
+                  src="/kavimobilya.png"
+                  alt="Kavi Mobilya"
                   fill
                   className="object-cover opacity-30"
                   sizes="100vw"
