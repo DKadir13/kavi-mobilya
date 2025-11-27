@@ -372,7 +372,7 @@ export default function ProductsManagementPage() {
         description: si.description,
         price: si.price ? (typeof si.price === 'number' ? si.price.toString() : si.price) : '',
         image_url: si.image_url,
-        quantity: si.quantity || 1,
+        quantity: si.quantity ?? 1,
         is_optional: si.is_optional || false,
         sub_items: (si.sub_items || []).map((nestedSi: any) => ({
           product_id: nestedSi.product_id,
@@ -380,7 +380,7 @@ export default function ProductsManagementPage() {
           description: nestedSi.description,
           price: nestedSi.price ? (typeof nestedSi.price === 'number' ? nestedSi.price.toString() : nestedSi.price) : '',
           image_url: nestedSi.image_url,
-          quantity: nestedSi.quantity || 1,
+          quantity: nestedSi.quantity ?? 1,
           is_optional: nestedSi.is_optional || false,
         })),
       })),
@@ -766,7 +766,7 @@ export default function ProductsManagementPage() {
                         description: '',
                         price: '',
                         image_url: '',
-                        quantity: 1,
+                        quantity: 0,
                         is_optional: false,
                         sub_items: [],
                       }];

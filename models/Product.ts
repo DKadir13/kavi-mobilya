@@ -36,7 +36,7 @@ const ProductSubItemSchema = new Schema(
     description: { type: String }, // Parça açıklaması
     price: { type: Number }, // Parça fiyatı
     image_url: { type: String }, // Parça görseli
-    quantity: { type: Number, default: 1 },
+    quantity: { type: Number, default: 0 },
     is_optional: { type: Boolean, default: false }, // Opsiyonel parça mı? (sepette çıkarılabilir)
     sub_items: { type: [Schema.Types.Mixed], default: [] }, // Parçanın kendi parçaları (nested)
   },

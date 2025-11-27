@@ -229,7 +229,7 @@ export default function ProductsPage() {
                   name: subProduct.name,
                   image_url: subProduct.image_url,
                   price: subProduct.price,
-                  quantity: subItem.quantity || 1,
+                  quantity: subItem.quantity ?? 1,
                   is_optional: subItem.is_optional || false,
                 };
               } catch {

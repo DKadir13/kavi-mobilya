@@ -73,7 +73,7 @@ export default function SubItemEditor({
       description: '',
       price: '',
       image_url: '',
-      quantity: 1,
+      quantity: 0,
       is_optional: false,
       sub_items: [],
     }];
@@ -229,9 +229,9 @@ export default function SubItemEditor({
                   <Label>Adet</Label>
                   <Input
                     type="number"
-                    min="1"
+                    min="0"
                     value={subItem.quantity}
-                    onChange={(e) => handleUpdate('quantity', parseInt(e.target.value) || 1)}
+                    onChange={(e) => handleUpdate('quantity', parseInt(e.target.value) ?? 0)}
                   />
                 </div>
 
