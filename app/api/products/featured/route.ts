@@ -6,11 +6,24 @@ import Category from '@/models/Category';
 export async function GET() {
   try {
     await connectDB();
-    const products: any[] = await Product.find({ is_featured: true, is_active: true })
-      .select('name image_url images store_type price category_id featured_order')
-      .sort({ featured_order: 1 })
-      .limit(6)
-      .lean();
+    // Aggregation pipeline kullanarak allowDiskUse desteği
+    const products: any[] = await Product.aggregate([
+      { $match: { is_featured: true, is_active: true } },
+      { $sort: { featured_order: 1 } },
+      { $limit: 6 },
+      {
+        $project: {
+          _id: 1,
+          name: 1,
+          image_url: 1,
+          images: 1,
+          store_type: 1,
+          price: 1,
+          category_id: 1,
+          featured_order: 1,
+        }
+      }
+    ]).allowDiskUse(true);
     
     // Get all unique category IDs
     const categoryIds = Array.from(

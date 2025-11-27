@@ -18,7 +18,12 @@ export async function GET(request: NextRequest) {
       query.sale_date = { $gte: startDate, $lt: endDate };
     }
 
-    const sales: any[] = await Sale.find(query).sort({ created_at: -1 }).lean();
+    // allowDiskUse: true - Büyük sort işlemleri için disk kullanımına izin ver
+    // Aggregation pipeline kullanarak allowDiskUse desteği
+    const sales: any[] = await Sale.aggregate([
+      { $match: query },
+      { $sort: { created_at: -1 } }
+    ]).allowDiskUse(true);
     
     // Get all unique product IDs
     const productIds = Array.from(

@@ -6,11 +6,22 @@ export async function GET() {
   try {
     await connectDB();
     // Optimize: Sadece gerekli alanları seç, limit ekle
-    const categories = await Category.find()
-      .select('name slug description image_url order_index')
-      .sort({ order_index: 1 })
-      .limit(100) // Maksimum 100 kategori (admin panel için yeterli)
-      .lean();
+    // allowDiskUse: true - Büyük sort işlemleri için disk kullanımına izin ver
+    // Aggregation pipeline kullanarak allowDiskUse desteği
+    const categories = await Category.aggregate([
+      { $sort: { order_index: 1 } },
+      { $limit: 100 }, // Maksimum 100 kategori (admin panel için yeterli)
+      {
+        $project: {
+          _id: 1,
+          name: 1,
+          slug: 1,
+          description: 1,
+          image_url: 1,
+          order_index: 1,
+        }
+      }
+    ]).allowDiskUse(true);
     
     const response = NextResponse.json(categories);
     

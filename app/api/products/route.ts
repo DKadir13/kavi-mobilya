@@ -22,11 +22,29 @@ export async function GET(request: NextRequest) {
 
     // Only select necessary fields for better performance
     // Optimize: Sadece gerekli alanları seç, limit ekle
-    const products: any[] = await Product.find(query)
-      .select('name description price image_url images store_type category_id is_featured is_active featured_order created_at')
-      .sort({ created_at: -1 })
-      .limit(1000) // Maksimum 1000 ürün (admin panel için yeterli)
-      .lean();
+    // allowDiskUse: true - Büyük sort işlemleri için disk kullanımına izin ver
+    // Aggregation pipeline kullanarak allowDiskUse desteği
+    const products: any[] = await Product.aggregate([
+      { $match: query },
+      { $sort: { created_at: -1 } },
+      { $limit: 1000 }, // Maksimum 1000 ürün (admin panel için yeterli)
+      {
+        $project: {
+          _id: 1,
+          name: 1,
+          description: 1,
+          price: 1,
+          image_url: 1,
+          images: 1,
+          store_type: 1,
+          category_id: 1,
+          is_featured: 1,
+          is_active: 1,
+          featured_order: 1,
+          created_at: 1,
+        }
+      }
+    ]).allowDiskUse(true);
     
     // Get all unique category IDs
     const categoryIds = Array.from(
