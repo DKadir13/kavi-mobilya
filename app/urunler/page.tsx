@@ -237,8 +237,9 @@ export default function ProductsPage() {
               }
             } else if (subItem.name) {
               // Yeni parça (name, description, price, image_url ile)
+              // Name'i ID olarak kullan (tutarlılık için)
               return {
-                id: `sub-${Date.now()}-${Math.random()}`, // Geçici ID
+                id: subItem.name, // Name'i ID olarak kullan
                 name: subItem.name,
                 image_url: subItem.image_url || null,
                 price: subItem.price || null,

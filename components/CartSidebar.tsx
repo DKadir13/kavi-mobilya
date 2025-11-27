@@ -40,6 +40,7 @@ export default function CartSidebar({ open, onClose }: CartSidebarProps) {
                 const subProduct = await productsApi.getById(subItem.product_id);
                 return {
                   id: subProduct._id,
+                  product_id: subItem.product_id, // Orijinal product_id'yi de sakla
                   name: subProduct.name,
                   image_url: subProduct.image_url,
                   price: subProduct.price,
@@ -51,7 +52,7 @@ export default function CartSidebar({ open, onClose }: CartSidebarProps) {
               }
             } else if (subItem.name) {
               return {
-                id: `sub-${Date.now()}-${Math.random()}`,
+                id: subItem.name, // Name'i ID olarak kullan (tutarlılık için)
                 name: subItem.name,
                 image_url: subItem.image_url || null,
                 price: subItem.price || null,
@@ -344,8 +345,18 @@ export default function CartSidebar({ open, onClose }: CartSidebarProps) {
                           </p>
                           {productSubItems[item.id]
                             .filter(subItem => {
-                              // Zaten eklenmiş parçaları gösterme
-                              if (item.sub_items?.some(si => si.id === subItem.id)) return false;
+                              // Zaten eklenmiş parçaları gösterme - ID veya name ile kontrol et
+                              const alreadyAdded = item.sub_items?.some(si => {
+                                // ID eşleşmesi
+                                if (si.id === subItem.id) return true;
+                                // Name eşleşmesi (ID yoksa)
+                                if (si.name === subItem.name) return true;
+                                // Product ID eşleşmesi (eğer subItem'da product_id varsa)
+                                if (subItem.product_id && si.id === subItem.product_id) return true;
+                                return false;
+                              });
+                              if (alreadyAdded) return false;
+                              
                               // Gizlenmiş parçaları gösterme
                               if (hiddenSubItems[item.id]?.has(subItem.id)) return false;
                               return true;
