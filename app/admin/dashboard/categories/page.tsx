@@ -214,17 +214,6 @@ export default function CategoriesPage() {
     [categories]
   );
 
-  const resetForm = useCallback(() => {
-    setFormData({
-      name: '',
-      slug: '',
-      description: '',
-      order_index: '0',
-    });
-    setEditingCategory(null);
-    setSubmitting(false);
-  }, []);
-
   const sortedCategories = useMemo(
     () => [...categories].sort((a, b) => a.order_index - b.order_index),
     [categories]
