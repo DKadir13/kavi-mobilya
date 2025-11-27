@@ -196,12 +196,11 @@ export default function CartSidebar({ open, onClose }: CartSidebarProps) {
                       </div>
                     </div>
 
-                    {/* Ürün Parçaları (Sub Items) */}
-                    {item.sub_items && item.sub_items.length > 0 ? (
+                    {/* Ürün Parçaları (Sub Items) - Her zaman göster */}
                     <div className="ml-4 pl-4 border-l-2 border-gray-300 space-y-2">
                       <div className="flex items-center justify-between mb-2">
                         <p className="text-xs font-medium text-gray-600">
-                          Ürün Parçaları ({item.sub_items.length}):
+                          Ürün Parçaları ({item.sub_items?.length || 0}):
                         </p>
                         <Button
                           variant="ghost"
@@ -215,7 +214,8 @@ export default function CartSidebar({ open, onClose }: CartSidebarProps) {
                       </div>
                       
                       {/* Mevcut Parçalar */}
-                      {item.sub_items.map((subItem) => (
+                      {item.sub_items && item.sub_items.length > 0 ? (
+                        item.sub_items.map((subItem) => (
                         <div
                           key={subItem.id}
                           className={`flex items-center gap-2 p-2 rounded-lg ${
@@ -287,7 +287,12 @@ export default function CartSidebar({ open, onClose }: CartSidebarProps) {
                             </div>
                           )}
                         </div>
-                      ))}
+                        ))
+                      ) : (
+                        <p className="text-xs text-gray-400 text-center py-2">
+                          Bu ürünün parçası yok. "Parçaları Yükle" butonuna tıklayarak ürünün tüm parçalarını görebilirsiniz.
+                        </p>
+                      )}
 
                       {/* Eklenebilecek Diğer Parçalar */}
                       {productSubItems[item.id] && productSubItems[item.id].length > 0 && (
@@ -347,7 +352,6 @@ export default function CartSidebar({ open, onClose }: CartSidebarProps) {
                         </div>
                       )}
                     </div>
-                    ) : null}
                   </div>
                 ))}
               </div>

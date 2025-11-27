@@ -72,8 +72,18 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     setItems((prev) => {
       const existing = prev.find((i) => i.id === item.id);
       if (existing) {
+        // Mevcut ürün varsa, quantity'yi artır ama sub_items'ı koru (yeni sub_items varsa onları kullan)
         const updated = prev.map((i) =>
-          i.id === item.id ? { ...i, quantity: i.quantity + 1 } : i
+          i.id === item.id 
+            ? { 
+                ...i, 
+                quantity: i.quantity + 1,
+                // Eğer yeni item'da sub_items varsa ve mevcut item'da yoksa, yeni sub_items'ı kullan
+                sub_items: item.sub_items && item.sub_items.length > 0 
+                  ? item.sub_items 
+                  : i.sub_items
+              } 
+            : i
         );
         toast.success(`${item.name} sepete eklendi`);
         return updated;
