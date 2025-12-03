@@ -107,6 +107,11 @@ export default function ProductsPage() {
   }, []);
 
   const loadProducts = useCallback(async (category: string, store: string) => {
+    // Kategoriler yüklenmeden ürünleri yükleme
+    if (categories.length === 0 && category !== 'all') {
+      return;
+    }
+    
     setLoading(true);
     try {
       const cat = categories.find((c) => c.slug === category);
@@ -149,9 +154,12 @@ export default function ProductsPage() {
 
   useEffect(() => {
     loadCategories();
-  }, [loadCategories]);
+  }, []);
 
   useEffect(() => {
+    // Kategoriler yüklendikten sonra ürünleri yükle
+    if (categories.length === 0) return;
+    
     const category = searchParams.get('kategori');
     const store = searchParams.get('magaza');
     const searchParam = searchParams.get('search');
@@ -168,7 +176,8 @@ export default function ProductsPage() {
     }
 
     loadProducts(category || 'all', store || 'all');
-  }, [searchParams, loadProducts]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams, categories.length]);
 
   // Filtered and sorted products
   const filteredProducts = useMemo(() => {

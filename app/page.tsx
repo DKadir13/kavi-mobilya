@@ -27,6 +27,7 @@ type Product = {
 
 export default function Home() {
   const [featuredProducts, setFeaturedProducts] = useState<Product[]>([]);
+  const [loadingFeatured, setLoadingFeatured] = useState(true);
   const [api, setApi] = useState<CarouselApi>();
   const [current, setCurrent] = useState(0);
   const [showIntro, setShowIntro] = useState(true);
@@ -75,6 +76,7 @@ export default function Home() {
 
   const loadFeaturedProducts = async () => {
     try {
+      setLoadingFeatured(true);
       const data = await productsApi.getFeatured();
       const formattedData = data
         .map((product: any) => ({
@@ -90,7 +92,9 @@ export default function Home() {
       setFeaturedProducts(formattedData);
     } catch (error) {
       console.error('Featured products load error:', error);
-      // Silent fail - empty state will show
+      setFeaturedProducts([]);
+    } finally {
+      setLoadingFeatured(false);
     }
   };
 
@@ -317,7 +321,12 @@ export default function Home() {
               </p>
             </div>
 
-          {featuredProducts.length > 0 ? (
+          {loadingFeatured ? (
+            <div className="flex flex-col items-center justify-center py-12">
+              <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-[#a42a2a] mb-4"></div>
+              <p className="text-gray-600">Ürünler yükleniyor...</p>
+            </div>
+          ) : featuredProducts.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {featuredProducts.map((product, index) => {
                 // İlk resmi kullan (image_url veya images array'inden)
