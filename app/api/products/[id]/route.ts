@@ -80,9 +80,16 @@ export async function PUT(
       body.featured_order = null;
     }
     
+    // Sadece gönderilen alanları güncelle (undefined/null olmayan) - kısmi güncellemede category_id kaybolmasın
+    const updateFields: Record<string, unknown> = { updated_at: new Date() };
+    for (const [key, value] of Object.entries(body)) {
+      if (value !== undefined && value !== null) {
+        updateFields[key] = value;
+      }
+    }
     const product: any = await Product.findByIdAndUpdate(
       params.id,
-      { ...body, updated_at: new Date() },
+      { $set: updateFields },
       {
         new: true,
         runValidators: true,

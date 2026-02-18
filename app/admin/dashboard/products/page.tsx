@@ -22,7 +22,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { Plus, Edit, Trash2, Search, Upload, X, ChevronDown, ChevronRight } from 'lucide-react';
+import { Plus, Edit, Trash2, Search, Upload, X, ChevronDown, ChevronRight, Percent, Banknote } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import Image from 'next/image';
 import { toast } from 'sonner';
@@ -118,6 +118,11 @@ export default function ProductsManagementPage() {
   });
   const [uploadingImages, setUploadingImages] = useState(false);
   const [imagePreview, setImagePreview] = useState<string[]>([]);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkPriceDialogOpen, setBulkPriceDialogOpen] = useState(false);
+  const [bulkPriceType, setBulkPriceType] = useState<'fixed' | 'percent'>('percent');
+  const [bulkPriceValue, setBulkPriceValue] = useState('');
+  const [bulkPriceSubmitting, setBulkPriceSubmitting] = useState(false);
   const debouncedSearchTerm = useDebounce(searchTerm, 300);
 
   const loadData = useCallback(async () => {
@@ -268,16 +273,21 @@ export default function ProductsManagementPage() {
         // Arka planda API çağrısı
         productsApi.update(productId, productData)
           .then((updatedProduct) => {
-            // API'den dönen güncel veriyi kullan
-            const updatedCategory = categories.find(c => (c._id || c.id) === updatedProduct.category_id);
+            // API'den dönen güncel veriyi kullan - category_id zaten obje olarak dönüyor, kaybetmeyelim
+            const cat = updatedProduct.category_id;
+            const category_id: Product['category_id'] =
+              cat && typeof cat === 'object' && cat._id
+                ? { _id: cat._id, name: cat.name || '', slug: cat.slug || '' }
+                : cat && typeof cat === 'string'
+                  ? (() => {
+                      const c = categories.find((x) => (x._id || x.id) === cat);
+                      return c ? { _id: c._id || c.id || '', name: c.name, slug: c.slug || '' } : null;
+                    })()
+                  : null;
             const finalProduct: Product = {
               ...updatedProduct,
               id: updatedProduct._id,
-              category_id: updatedCategory ? {
-                _id: updatedCategory._id || updatedCategory.id || '',
-                name: updatedCategory.name,
-                slug: updatedCategory.slug || '',
-              } : null,
+              category_id,
             };
             setProducts((prev) =>
               prev.map((p) => (p._id || p.id) === productId ? finalProduct : p)
@@ -508,6 +518,82 @@ export default function ProductsManagementPage() {
       ),
     [products, debouncedSearchTerm]
   );
+
+  const toggleSelect = useCallback((id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
+
+  const selectAllFiltered = useCallback(() => {
+    setSelectedIds(new Set(filteredProducts.map((p) => p._id || p.id || '').filter(Boolean)));
+  }, [filteredProducts]);
+
+  const clearSelection = useCallback(() => {
+    setSelectedIds(new Set());
+  }, []);
+
+  const handleBulkPriceApply = useCallback(async () => {
+    const value = parseFloat(bulkPriceValue.replace(',', '.'));
+    if (Number.isNaN(value) || value <= 0) {
+      toast.error('Geçerli bir miktar girin (0\'dan büyük sayı)');
+      return;
+    }
+    if (bulkPriceType === 'percent' && value > 1000) {
+      toast.error('Yüzde için makul bir değer girin');
+      return;
+    }
+    const ids = Array.from(selectedIds);
+    if (ids.length === 0) {
+      toast.error('En az bir ürün seçin');
+      return;
+    }
+    setBulkPriceSubmitting(true);
+    try {
+      let done = 0;
+      let failed = 0;
+      for (const id of ids) {
+        const product = products.find((p) => (p._id || p.id) === id);
+        if (!product) continue;
+        const current = product.price ?? 0;
+        const newPrice =
+          bulkPriceType === 'fixed'
+            ? Math.round((current + value) * 100) / 100
+            : Math.round(current * (1 + value / 100) * 100) / 100;
+        if (newPrice < 0) {
+          failed++;
+          continue;
+        }
+        try {
+          await productsApi.update(id, { price: newPrice });
+          setProducts((prev) =>
+            prev.map((p) => {
+              if ((p._id || p.id) !== id) return p;
+              return { ...p, price: newPrice };
+            })
+          );
+          done++;
+        } catch {
+          failed++;
+        }
+      }
+      setBulkPriceDialogOpen(false);
+      setBulkPriceValue('');
+      setSelectedIds(new Set());
+      if (failed > 0) {
+        toast.warning(`${done} ürüne zam uygulandı, ${failed} ürün güncellenemedi.`);
+      } else {
+        toast.success(`${done} ürünün fiyatı güncellendi.`);
+      }
+    } catch (e: any) {
+      toast.error(e?.message || 'Toplu zam uygulanırken hata oluştu');
+    } finally {
+      setBulkPriceSubmitting(false);
+    }
+  }, [bulkPriceValue, bulkPriceType, selectedIds, products]);
 
   return (
     <div className="space-y-6">
@@ -843,7 +929,7 @@ export default function ProductsManagementPage() {
         </Dialog>
       </div>
 
-      <div className="bg-white p-4 rounded-lg shadow">
+      <div className="bg-white p-4 rounded-lg shadow space-y-3">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
           <Input
@@ -853,7 +939,104 @@ export default function ProductsManagementPage() {
             className="pl-10"
           />
         </div>
+        {!loading && filteredProducts.length > 0 && (
+          <div className="flex flex-wrap items-center gap-2">
+            <Button type="button" variant="outline" size="sm" onClick={selectAllFiltered}>
+              Tümünü seç
+            </Button>
+            {selectedIds.size > 0 && (
+              <>
+                <Button type="button" variant="outline" size="sm" onClick={clearSelection}>
+                  Seçimi temizle ({selectedIds.size})
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  className="bg-[#a42a2a] hover:bg-[#8a2222]"
+                  onClick={() => setBulkPriceDialogOpen(true)}
+                >
+                  <Percent className="h-4 w-4 mr-2" />
+                  Seçilenlere zam uygula
+                </Button>
+              </>
+            )}
+          </div>
+        )}
       </div>
+
+      {/* Toplu zam dialog */}
+      <Dialog open={bulkPriceDialogOpen} onOpenChange={setBulkPriceDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Toplu zam uygula</DialogTitle>
+            <DialogDescription>
+              {selectedIds.size} ürüne zam uygulanacak. Zam türü ve miktarı seçin.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 pt-2">
+            <div className="space-y-2">
+              <Label>Zam türü</Label>
+              <div className="flex gap-4">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="bulkPriceType"
+                    checked={bulkPriceType === 'percent'}
+                    onChange={() => setBulkPriceType('percent')}
+                    className="rounded"
+                  />
+                  <Percent className="h-4 w-4" />
+                  Yüzde (%)
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="bulkPriceType"
+                    checked={bulkPriceType === 'fixed'}
+                    onChange={() => setBulkPriceType('fixed')}
+                    className="rounded"
+                  />
+                  <Banknote className="h-4 w-4" />
+                  Sabit tutar (TL)
+                </label>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="bulkPriceValue">
+                {bulkPriceType === 'percent' ? 'Yüzde değeri (%)' : 'Tutar (TL)'}
+              </Label>
+              <Input
+                id="bulkPriceValue"
+                type="number"
+                step={bulkPriceType === 'percent' ? 0.5 : 0.01}
+                min={0}
+                placeholder={bulkPriceType === 'percent' ? 'Örn: 10' : 'Örn: 50'}
+                value={bulkPriceValue}
+                onChange={(e) => setBulkPriceValue(e.target.value)}
+              />
+            </div>
+            <div className="flex gap-2 pt-2">
+              <Button
+                className="flex-1 bg-[#a42a2a] hover:bg-[#8a2222]"
+                onClick={handleBulkPriceApply}
+                disabled={bulkPriceSubmitting}
+              >
+                {bulkPriceSubmitting ? 'Uygulanıyor...' : 'Uygula'}
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setBulkPriceDialogOpen(false);
+                  setBulkPriceValue('');
+                }}
+                disabled={bulkPriceSubmitting}
+              >
+                İptal
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <div className="bg-white rounded-lg shadow overflow-hidden">
         {loading ? (
@@ -868,6 +1051,15 @@ export default function ProductsManagementPage() {
             <table className="w-full">
               <thead className="bg-gray-50 border-b">
                 <tr>
+                  <th className="px-2 py-3 w-10">
+                    <input
+                      type="checkbox"
+                      checked={filteredProducts.length > 0 && filteredProducts.every((p) => selectedIds.has(p._id || p.id || ''))}
+                      onChange={(e) => (e.target.checked ? selectAllFiltered() : clearSelection())}
+                      className="rounded"
+                      aria-label="Tümünü seç"
+                    />
+                  </th>
                   <th className="px-4 py-3 text-left text-sm font-semibold">
                     Görsel
                   </th>
@@ -901,6 +1093,15 @@ export default function ProductsManagementPage() {
 
                   return (
                     <tr key={productId} className="hover:bg-gray-50">
+                    <td className="px-2 py-3">
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.has(productId)}
+                        onChange={() => toggleSelect(productId)}
+                        className="rounded"
+                        aria-label={`${product.name} seç`}
+                      />
+                    </td>
                     <td className="px-4 py-3">
                       <div className="relative w-16 h-16 bg-gray-100 rounded">
                         {product.image_url ? (
