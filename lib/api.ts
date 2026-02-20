@@ -97,6 +97,7 @@ export const productsApi = {
     store_type?: string;
     is_featured?: boolean;
     is_active?: boolean;
+    forAdmin?: boolean;
   }) => {
     const queryParams = new URLSearchParams();
     if (params?.category_id) queryParams.append('category_id', params.category_id);
@@ -105,6 +106,7 @@ export const productsApi = {
       queryParams.append('is_featured', params.is_featured.toString());
     if (params?.is_active !== undefined)
       queryParams.append('is_active', params.is_active.toString());
+    if (params?.forAdmin) queryParams.append('admin', '1');
 
     const query = queryParams.toString();
     return fetchApi<any[]>(`/products${query ? `?${query}` : ''}`);

@@ -5,24 +5,12 @@ import Category from '@/models/Category';
 export async function GET() {
   try {
     await connectDB();
-    // Optimize: Sadece gerekli alanları seç, limit ekle
-    // allowDiskUse: true - Büyük sort işlemleri için disk kullanımına izin ver
-    // Aggregation pipeline kullanarak allowDiskUse desteği
-    const categories = await Category.aggregate([
-      { $sort: { order_index: 1 } },
-      { $limit: 100 }, // Maksimum 100 kategori (admin panel için yeterli)
-      {
-        $project: {
-          _id: 1,
-          name: 1,
-          slug: 1,
-          description: 1,
-          image_url: 1,
-          order_index: 1,
-        }
-      }
-    ], { allowDiskUse: true });
-    
+    const categories = await Category.find()
+      .sort({ order_index: 1 })
+      .limit(100)
+      .select('_id name slug description image_url order_index')
+      .lean();
+
     const response = NextResponse.json(categories);
     
     // Cache categories for 10 minutes (they change rarely)

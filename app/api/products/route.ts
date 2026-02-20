@@ -11,45 +11,25 @@ export async function GET(request: NextRequest) {
     const store_type = searchParams.get('store_type');
     const is_featured = searchParams.get('is_featured');
     const is_active = searchParams.get('is_active');
+    const forAdmin = searchParams.get('admin') === '1' || searchParams.get('forAdmin') === '1';
 
-    let query: any = {};
-
+    const query: Record<string, unknown> = {};
     if (category_id) query.category_id = category_id;
     if (store_type) query.store_type = store_type;
     if (is_featured === 'true') query.is_featured = true;
     if (is_active === 'true') query.is_active = true;
     if (is_active === 'false') query.is_active = false;
 
-    // Only select necessary fields for better performance
-    // Optimize: Sadece gerekli alanları seç, limit ekle
-    // allowDiskUse: true - Büyük sort işlemleri için disk kullanımına izin ver
-    // Aggregation pipeline kullanarak allowDiskUse desteği
-    // Not: Limit'i 500'e düşürdük (memory limit sorununu önlemek için)
-    // sub_items'ı sadece admin panel için yükle (is_active parametresi varsa)
-    const includeSubItems = is_active !== undefined || is_featured !== undefined;
-    const products: any[] = await Product.aggregate([
-      { $match: query },
-      { $sort: { created_at: -1 } },
-      { $limit: 500 }, // Maksimum 500 ürün (admin panel için yeterli, memory limit sorununu önler)
-      {
-        $project: {
-          _id: 1,
-          name: 1,
-          description: 1,
-          price: 1,
-          image_url: 1,
-          images: 1,
-          store_type: 1,
-          category_id: 1,
-          is_featured: 1,
-          is_active: 1,
-          featured_order: 1,
-          ...(includeSubItems ? { sub_items: 1 } : {}), // Sadece admin panel için sub_items
-          created_at: 1,
-        }
-      }
-    ], { allowDiskUse: true });
-    
+    const includeSubItems = forAdmin || is_active !== undefined || is_featured !== undefined;
+    const selectFields = '_id name description price image_url images store_type category_id is_featured is_active featured_order created_at' +
+      (includeSubItems ? ' sub_items' : '');
+
+    const products: any[] = await Product.find(query)
+      .sort({ created_at: -1 })
+      .limit(500)
+      .select(selectFields)
+      .lean();
+
     // Get all unique category IDs
     const categoryIds = Array.from(
       new Set(
@@ -89,12 +69,10 @@ export async function GET(request: NextRequest) {
 
     const response = NextResponse.json(productsWithCategories);
     
-    // Cache for 5 minutes (public) or no cache (admin panel)
-    if (is_active !== undefined || is_featured !== undefined) {
-      // Admin panel için cache yok
+    // Cache: admin veya filtre varsa cache yok; public için 5 dk
+    if (forAdmin || is_active !== undefined || is_featured !== undefined) {
       response.headers.set('Cache-Control', 'no-store, must-revalidate');
     } else {
-      // Public için cache
       response.headers.set('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=600');
     }
     

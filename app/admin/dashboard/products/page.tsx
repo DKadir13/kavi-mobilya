@@ -125,17 +125,18 @@ export default function ProductsManagementPage() {
   const [bulkPriceSubmitting, setBulkPriceSubmitting] = useState(false);
   const debouncedSearchTerm = useDebounce(searchTerm, 300);
 
+  const [loadError, setLoadError] = useState<string | null>(null);
+
   const loadData = useCallback(async () => {
+    setLoadError(null);
     try {
       setLoading(true);
-      // Paralel yükleme - optimize edilmiş
       const [productsData, categoriesData] = await Promise.all([
-        productsApi.getAll(),
+        productsApi.getAll({ forAdmin: true }),
         categoriesApi.getAll(),
       ]);
 
-      // Sadece gerekli alanları formatla
-      const formattedProducts = productsData.map((p: any) => ({
+      const formattedProducts = (productsData || []).map((p: any) => ({
         _id: p._id,
         id: p._id,
         name: p.name,
@@ -150,7 +151,7 @@ export default function ProductsManagementPage() {
         is_active: p.is_active,
       }));
 
-      const formattedCategories = categoriesData.map((c: any) => ({
+      const formattedCategories = (categoriesData || []).map((c: any) => ({
         _id: c._id,
         id: c._id,
         name: c.name,
@@ -160,7 +161,9 @@ export default function ProductsManagementPage() {
       setCategories(formattedCategories);
     } catch (error: any) {
       console.error('Load data error:', error);
-      toast.error('Veriler yüklenirken bir hata oluştu');
+      const message = error?.message || error?.error || 'Veriler yüklenirken bir hata oluştu';
+      setLoadError(message);
+      toast.error(message);
     } finally {
       setLoading(false);
     }
@@ -1043,6 +1046,17 @@ export default function ProductsManagementPage() {
           <div className="flex flex-col items-center justify-center py-20">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#a42a2a] mb-4"></div>
             <p className="text-lg font-medium text-gray-700">Ürünler yükleniyor, lütfen bekleyin...</p>
+          </div>
+        ) : loadError ? (
+          <div className="flex flex-col items-center justify-center py-16 px-4">
+            <p className="text-red-600 font-medium mb-2">Yükleme hatası</p>
+            <p className="text-gray-600 text-sm text-center mb-4 max-w-md">{loadError}</p>
+            <Button
+              onClick={() => loadData()}
+              className="bg-[#a42a2a] hover:bg-[#8a2222]"
+            >
+              Yeniden dene
+            </Button>
           </div>
         ) : filteredProducts.length === 0 ? (
           <div className="p-8 text-center text-gray-500">Ürün bulunamadı</div>
