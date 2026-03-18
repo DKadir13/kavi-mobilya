@@ -98,6 +98,10 @@ export const productsApi = {
     is_featured?: boolean;
     is_active?: boolean;
     forAdmin?: boolean;
+    // Public sayfada sepet için gerekli olan `sub_items` bilgisini ağır nested detaylar olmadan almak için.
+    include_sub_items_minimal?: boolean;
+    // Tam nested sub_items (admin/özel kullanım).
+    include_sub_items?: boolean;
   }) => {
     const queryParams = new URLSearchParams();
     if (params?.category_id) queryParams.append('category_id', params.category_id);
@@ -107,6 +111,10 @@ export const productsApi = {
     if (params?.is_active !== undefined)
       queryParams.append('is_active', params.is_active.toString());
     if (params?.forAdmin) queryParams.append('admin', '1');
+    if (params?.include_sub_items_minimal)
+      queryParams.append('include_sub_items_minimal', '1');
+    if (params?.include_sub_items)
+      queryParams.append('include_sub_items', '1');
 
     const query = queryParams.toString();
     return fetchApi<any[]>(`/products${query ? `?${query}` : ''}`);

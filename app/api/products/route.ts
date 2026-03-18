@@ -12,6 +12,13 @@ export async function GET(request: NextRequest) {
     const is_featured = searchParams.get('is_featured');
     const is_active = searchParams.get('is_active');
     const forAdmin = searchParams.get('admin') === '1' || searchParams.get('forAdmin') === '1';
+    const includeSubItemsFull =
+      forAdmin ||
+      searchParams.get('include_sub_items') === 'true' ||
+      searchParams.get('include_sub_items') === '1';
+    const includeSubItemsMinimal =
+      searchParams.get('include_sub_items_minimal') === 'true' ||
+      searchParams.get('include_sub_items_minimal') === '1';
 
     const query: Record<string, unknown> = {};
     if (category_id) query.category_id = category_id;
@@ -20,9 +27,19 @@ export async function GET(request: NextRequest) {
     if (is_active === 'true') query.is_active = true;
     if (is_active === 'false') query.is_active = false;
 
-    const includeSubItems = forAdmin || is_active !== undefined || is_featured !== undefined;
-    const selectFields = '_id name description price image_url images store_type category_id is_featured is_active featured_order created_at' +
-      (includeSubItems ? ' sub_items' : '');
+    // Public ürün listesi için sadece gerekli alanlar dönsün.
+    // - Full nested sub_items: sadece admin veya include_sub_items=true
+    // - Minimal sub_items: sadece include_sub_items_minimal=true (cart için yeterli, nested olmayan)
+    const selectFields =
+      '_id name description price image_url images store_type category_id' +
+      (forAdmin || includeSubItemsFull
+        ? ' is_featured is_active featured_order created_at'
+        : '') +
+      (includeSubItemsFull
+        ? ' sub_items'
+        : includeSubItemsMinimal
+          ? ' sub_items.product_id sub_items.name sub_items.price sub_items.image_url sub_items.quantity sub_items.is_optional'
+          : '');
 
     const products: any[] = await Product.find(query)
       .sort({ created_at: -1 })
@@ -69,8 +86,8 @@ export async function GET(request: NextRequest) {
 
     const response = NextResponse.json(productsWithCategories);
     
-    // Cache: admin veya filtre varsa cache yok; public için 5 dk
-    if (forAdmin || is_active !== undefined || is_featured !== undefined) {
+    // Cache: sadece full nested sub_items (veya admin) için kapat; minimal/public için cache açık.
+    if (forAdmin || includeSubItemsFull) {
       response.headers.set('Cache-Control', 'no-store, must-revalidate');
     } else {
       response.headers.set('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=600');

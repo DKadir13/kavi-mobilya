@@ -116,7 +116,7 @@ export default function ProductsPage() {
     try {
       const cat = categories.find((c) => c.slug === category);
       
-      const params: any = { is_active: true };
+      const params: any = { is_active: true, include_sub_items_minimal: true };
       if (category !== 'all' && cat) {
         params.category_id = cat._id;
       }
@@ -130,7 +130,7 @@ export default function ProductsPage() {
         ...product,
         id: product._id,
         category_id: product.category_id !== null && typeof product.category_id === 'object' ? product.category_id : null,
-        // sub_items'ı public sayfada yükleme (performans için)
+        // Sepet için gerekli olan `sub_items` minimal geliyor (nested olmayan)
       }));
       setAllProducts(formatted);
       setCurrentPage(1); // Reset to first page when filters change
