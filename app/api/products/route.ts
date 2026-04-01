@@ -99,7 +99,10 @@ export async function GET(request: NextRequest) {
     
     // Check if it's a MongoDB connection error
     const errorMessage = error.message || 'Ürünler yüklenirken bir hata oluştu';
-    if (errorMessage.includes('Invalid scheme') || errorMessage.includes('mongodb://')) {
+    const isMongoConfigError =
+      errorMessage.includes('MONGODB_URI') ||
+      errorMessage.includes('MongoDB URI must start');
+    if (isMongoConfigError) {
       return NextResponse.json(
         { 
           error: 'MongoDB bağlantı yapılandırması hatalı. Lütfen MONGODB_URI environment variable\'ını kontrol edin.',
