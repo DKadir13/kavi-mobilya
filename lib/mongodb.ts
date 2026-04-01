@@ -20,10 +20,8 @@ function validateMongoUri(uri: string): void {
   }
 }
 
-// Log MongoDB URI (without password) for debugging - only in development
-if (process.env.NODE_ENV === 'development') {
-  console.log('MongoDB URI:', MONGODB_URI?.replace(/:[^:@]+@/, ':****@'));
-}
+// Not: URI loglamak (maskeli bile olsa) prod/preview loglarında gereksiz risk oluşturabilir.
+// Bu yüzden burada loglamıyoruz.
 
 interface MongooseCache {
   conn: typeof mongoose | null;
@@ -63,10 +61,12 @@ async function connectDB() {
 
     const opts: mongoose.ConnectOptions = {
       bufferCommands: false,
-      maxPoolSize: 10, // Maintain up to 10 socket connections
-      serverSelectionTimeoutMS: 10000, // Serverless ortamda ilk bağlantı daha yavaş olabilir
+      // Serverless ortamda büyük pool gereksiz bağlantı açabilir
+      maxPoolSize: 5,
+      // Vercel cold start / transient network için daha toleranslı süreler
+      serverSelectionTimeoutMS: 30000,
       socketTimeoutMS: 45000, // Close sockets after 45 seconds of inactivity
-      connectTimeoutMS: 10000,
+      connectTimeoutMS: 30000,
       ...(shouldForceIpv4 ? { family: 4 } : {}),
     };
 
