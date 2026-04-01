@@ -1,6 +1,7 @@
 import mongoose from 'mongoose';
 
 const MONGODB_URI = process.env.MONGODB_URI;
+const MONGODB_DB_NAME = process.env.MONGODB_DB_NAME || 'kavi_mobilya';
 
 // Validate MongoDB URI format - only at runtime, not during build
 function validateMongoUri(uri: string): void {
@@ -18,6 +19,18 @@ function validateMongoUri(uri: string): void {
   if (!trimmedUri.startsWith('mongodb://') && !trimmedUri.startsWith('mongodb+srv://')) {
     throw new Error('MongoDB URI must start with "mongodb://" or "mongodb+srv://"');
   }
+}
+
+function ensureDbInMongoUri(uri: string, dbName: string) {
+  const trimmed = uri.trim();
+  const url = new URL(trimmed);
+
+  // URL.pathname boş veya "/" ise db belirtilmemiş demektir
+  if (!url.pathname || url.pathname === '/') {
+    url.pathname = `/${dbName}`;
+  }
+
+  return url.toString();
 }
 
 // Not: URI loglamak (maskeli bile olsa) prod/preview loglarında gereksiz risk oluşturabilir.
@@ -72,8 +85,9 @@ async function connectDB() {
 
     // Trim URI in case there's whitespace
     const trimmedUri = (MONGODB_URI || '').trim();
+    const normalizedUri = ensureDbInMongoUri(trimmedUri, MONGODB_DB_NAME);
 
-    cached.promise = mongoose.connect(trimmedUri, opts).then((mongoose) => {
+    cached.promise = mongoose.connect(normalizedUri, opts).then((mongoose) => {
       console.log('MongoDB connected successfully');
       return mongoose;
     }).catch((error) => {

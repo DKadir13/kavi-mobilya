@@ -41,7 +41,9 @@ Vercel dashboard'da şu environment variable'ları ekleyin:
 ### Gerekli Environment Variables:
 
 ```
-MONGODB_URI=mongodb+srv://kavihomemobilya_db_user:Vy4tGlPZgjkGPFth@cluster0.rpfuter.mongodb.net/kavi_mobilya?retryWrites=true&w=majority&appName=Cluster0
+MONGODB_URI=mongodb+srv://kavihomemobilya_db_user:<db_password>@cluster0.rpfuter.mongodb.net/?appName=Cluster0
+MONGODB_DB_NAME=kavi_mobilya
+JWT_SECRET=<strong-secret>
 BLOB_READ_WRITE_TOKEN=vercel_blob_rw_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 ```
 
