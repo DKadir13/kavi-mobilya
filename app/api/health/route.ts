@@ -12,6 +12,7 @@ export async function GET() {
 
   const mongoUri = process.env.MONGODB_URI;
   const jwtSecret = process.env.JWT_SECRET;
+  const blobToken = process.env.BLOB_READ_WRITE_TOKEN;
 
   const base = {
     ok: true,
@@ -28,6 +29,7 @@ export async function GET() {
       mongoUriMasked: mongoUri ? maskMongoUri(mongoUri.trim()) : null,
       hasJwtSecret: Boolean(jwtSecret && jwtSecret.trim()),
       forceIpv4: process.env.MONGODB_FORCE_IPV4 || null,
+      hasBlobToken: Boolean(blobToken && blobToken.trim()),
     },
     mongoose: {
       readyState: mongoose.connection.readyState, // 0 disconnected, 1 connected, 2 connecting, 3 disconnecting

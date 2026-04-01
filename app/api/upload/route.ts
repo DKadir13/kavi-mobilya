@@ -14,6 +14,17 @@ export const maxDuration = 30;
 
 export async function POST(request: NextRequest) {
   try {
+    if (!process.env.BLOB_READ_WRITE_TOKEN) {
+      return NextResponse.json(
+        {
+          error:
+            "BLOB_READ_WRITE_TOKEN tanımlı değil. Vercel > Project > Storage (Blob) kurulumunu yapın ve token'ı Environment Variables'a ekleyin.",
+          code: 'BLOB_TOKEN_MISSING',
+        },
+        { status: 500 }
+      );
+    }
+
     const formData = await request.formData();
     const files = formData.getAll('files') as File[];
 
@@ -135,6 +146,17 @@ export async function POST(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   try {
+    if (!process.env.BLOB_READ_WRITE_TOKEN) {
+      return NextResponse.json(
+        {
+          error:
+            "BLOB_READ_WRITE_TOKEN tanımlı değil. Vercel > Project > Storage (Blob) kurulumunu yapın ve token'ı Environment Variables'a ekleyin.",
+          code: 'BLOB_TOKEN_MISSING',
+        },
+        { status: 500 }
+      );
+    }
+
     const { searchParams } = new URL(request.url);
     const url = searchParams.get('url');
 
