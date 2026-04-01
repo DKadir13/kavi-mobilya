@@ -54,11 +54,20 @@ async function connectDB() {
   }
 
   if (!cached.promise) {
-    const opts = {
+    const shouldForceIpv4 =
+      process.env.MONGODB_FORCE_IPV4 === '1' ||
+      process.env.MONGODB_FORCE_IPV4 === 'true' ||
+      // Vercel'de bazı ortamlarda IPv6/DNS kaynaklı bağlantı sorunları görülebiliyor.
+      // Varsayılanı "force" yapmayıp env ile kontrol ediyoruz.
+      false;
+
+    const opts: mongoose.ConnectOptions = {
       bufferCommands: false,
       maxPoolSize: 10, // Maintain up to 10 socket connections
-      serverSelectionTimeoutMS: 5000, // Keep trying to send operations for 5 seconds
+      serverSelectionTimeoutMS: 10000, // Serverless ortamda ilk bağlantı daha yavaş olabilir
       socketTimeoutMS: 45000, // Close sockets after 45 seconds of inactivity
+      connectTimeoutMS: 10000,
+      ...(shouldForceIpv4 ? { family: 4 } : {}),
     };
 
     // Trim URI in case there's whitespace
