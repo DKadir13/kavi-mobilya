@@ -1,11 +1,15 @@
 import mongoose from 'mongoose';
 
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://kavihomemobilya_db_user:Vy4tGlPZgjkGPFth@cluster0.rpfuter.mongodb.net/kavi_mobilya?retryWrites=true&w=majority&appName=Cluster0';
+const MONGODB_URI = process.env.MONGODB_URI;
 
 // Validate MongoDB URI format - only at runtime, not during build
 function validateMongoUri(uri: string): void {
   if (!uri) {
-    throw new Error('MONGODB_URI is not defined!');
+    // Vercel/Next.js'te en sık sebep: Environment Variables eksik veya yanlış environment'a eklenmiş.
+    throw new Error(
+      'MONGODB_URI tanımlı değil. Vercel > Project > Settings > Environment Variables altında ' +
+        'MONGODB_URI değerini Production/Preview/Development için ekleyin ve redeploy edin.'
+    );
   }
   
   // Trim whitespace that might come from environment variables
@@ -18,7 +22,7 @@ function validateMongoUri(uri: string): void {
 
 // Log MongoDB URI (without password) for debugging - only in development
 if (process.env.NODE_ENV === 'development') {
-  console.log('MongoDB URI:', MONGODB_URI.replace(/:[^:@]+@/, ':****@'));
+  console.log('MongoDB URI:', MONGODB_URI?.replace(/:[^:@]+@/, ':****@'));
 }
 
 interface MongooseCache {
@@ -39,7 +43,7 @@ if (!global.mongoose) {
 async function connectDB() {
   // Validate URI only at runtime (when function is called), not during build
   try {
-    validateMongoUri(MONGODB_URI);
+    validateMongoUri(MONGODB_URI || '');
   } catch (error: any) {
     console.error('MongoDB URI validation error:', error.message);
     throw error;
@@ -55,11 +59,10 @@ async function connectDB() {
       maxPoolSize: 10, // Maintain up to 10 socket connections
       serverSelectionTimeoutMS: 5000, // Keep trying to send operations for 5 seconds
       socketTimeoutMS: 45000, // Close sockets after 45 seconds of inactivity
-      family: 4, // Use IPv4, skip trying IPv6
     };
 
     // Trim URI in case there's whitespace
-    const trimmedUri = MONGODB_URI.trim();
+    const trimmedUri = (MONGODB_URI || '').trim();
 
     cached.promise = mongoose.connect(trimmedUri, opts).then((mongoose) => {
       console.log('MongoDB connected successfully');

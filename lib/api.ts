@@ -38,15 +38,9 @@ async function fetchApi<T>(
       }
       
       const errorMessage = errorData.error || errorData.message || 'Bir hata oluştu';
-      
-      // MongoDB connection errors için özel mesaj
-      if (errorMessage.includes('MongoDB Atlas') || errorMessage.includes('whitelist') || errorMessage.includes('Could not connect')) {
-        throw new ApiError(
-          response.status,
-          'MongoDB bağlantı hatası: IP adresiniz MongoDB Atlas whitelist\'inde değil. Lütfen MongoDB Atlas yönetim panelinden IP adresinizi ekleyin. Detaylar için MONGODB_IP_WHITELIST.md dosyasına bakın.'
-        );
-      }
-      
+
+      // Not: Daha önce burada MongoDB bağlantı hataları "whitelist" şeklinde genelleniyordu.
+      // Bu, auth/DNS/timeout gibi gerçek hataları maskeleyip yanlış yönlendirebiliyor.
       throw new ApiError(response.status, errorMessage);
     }
 
