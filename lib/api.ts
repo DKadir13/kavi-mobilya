@@ -15,7 +15,10 @@ async function fetchApi<T>(
   retries: number = 1
 ): Promise<T> {
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 saniye timeout
+  // Vercel'de (özellikle cold start'ta) DB bağlantısı/SSR daha uzun sürebilir.
+  // 10sn agresif kalıp gereksiz AbortError üretebiliyor.
+  const timeoutMs = 30000;
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
   try {
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
@@ -59,7 +62,12 @@ async function fetchApi<T>(
     }
 
     // Network errors için özel mesaj
-    const errorMessage = error.message || 'Bağlantı hatası. Lütfen tekrar deneyin.';
+    const isAbort =
+      error?.name === 'AbortError' ||
+      String(error?.message || '').toLowerCase().includes('aborted');
+    const errorMessage = isAbort
+      ? `İstek zaman aşımına uğradı (${timeoutMs / 1000}sn). Lütfen tekrar deneyin.`
+      : error.message || 'Bağlantı hatası. Lütfen tekrar deneyin.';
     throw new ApiError(0, errorMessage);
   }
 }
