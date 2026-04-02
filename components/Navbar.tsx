@@ -43,8 +43,8 @@ export default function Navbar() {
     { href: '/iletisim', label: 'İletişim' },
   ];
 
-  // Admin sayfalarında navbar'ı gösterme
-  if (pathname?.startsWith('/admin')) {
+  // Bakım ve admin sayfalarında navbar'ı gösterme
+  if (pathname?.startsWith('/admin') || pathname?.startsWith('/bakim')) {
     return null;
   }
 

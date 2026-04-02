@@ -8,8 +8,8 @@ import { usePathname } from 'next/navigation';
 export default function Footer() {
   const pathname = usePathname();
 
-  // Admin sayfalarında footer'ı gösterme
-  if (pathname?.startsWith('/admin')) {
+  // Admin ve bakım sayfalarında footer'ı gösterme
+  if (pathname?.startsWith('/admin') || pathname?.startsWith('/bakim')) {
     return null;
   }
 
