@@ -1,18 +1,15 @@
-import Image from 'next/image';
-
 export default function BakimSayfasi() {
   return (
     <div className="min-h-screen bg-[#0a0a0a] text-white flex items-center justify-center p-6">
       <div className="w-full max-w-xl text-center">
         <div className="flex flex-col items-center">
-          <div className="relative w-28 h-28 sm:w-32 sm:h-32 mb-6">
-            <Image
+          {/* Bakım sayfasında `next/image` bazen `fill` ölçüsüne takılabiliyor;
+              garanti olsun diye düz img kullanıyoruz. */}
+          <div className="w-28 h-28 sm:w-32 sm:h-32 mb-6">
+            <img
               src="/logo.png"
               alt="Kavi Mobilya Logo"
-              fill
-              className="object-contain"
-              sizes="128px"
-              priority
+              className="w-full h-full object-contain"
             />
           </div>
 
