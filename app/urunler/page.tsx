@@ -71,6 +71,7 @@ type Category = {
 export default function ProductsPage() {
   const [allProducts, setAllProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [categoriesReady, setCategoriesReady] = useState(false);
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [selectedStore, setSelectedStore] = useState<string>('all');
@@ -103,18 +104,18 @@ export default function ProductsPage() {
         });
       }
       // Diğer hatalar için silent fail
+    } finally {
+      setCategoriesReady(true);
     }
   }, []);
 
+  const categoriesRef = useRef(categories);
+  categoriesRef.current = categories;
+
   const loadProducts = useCallback(async (category: string, store: string) => {
-    // Kategoriler yüklenmeden ürünleri yükleme
-    if (categories.length === 0 && category !== 'all') {
-      return;
-    }
-    
     setLoading(true);
     try {
-      const cat = categories.find((c) => c.slug === category);
+      const cat = categoriesRef.current.find((c) => c.slug === category);
       
       const params: any = { is_active: true, include_sub_items_minimal: true };
       if (category !== 'all' && cat) {
@@ -149,35 +150,45 @@ export default function ProductsPage() {
     } finally {
       setLoading(false);
     }
-  }, [categories]);
+  }, []);
 
 
   useEffect(() => {
     loadCategories();
   }, []);
 
+  // URL → filtre state (arama vb.)
   useEffect(() => {
-    // Kategoriler yüklendikten sonra ürünleri yükle
-    if (categories.length === 0) return;
-    
-    const category = searchParams.get('kategori');
+    const categoryParam = searchParams.get('kategori') || 'all';
     const store = searchParams.get('magaza');
     const searchParam = searchParams.get('search');
 
-    if (category) setSelectedCategory(category);
+    if (searchParams.get('kategori')) setSelectedCategory(categoryParam);
     if (store) setSelectedStore(store);
-    
-    // URL'den gelen search parametresini set et
+
     if (searchParam !== null) {
       setSearchQuery(searchParam);
     } else if (searchQuery && !searchParam) {
-      // URL'de search yoksa ama state'te varsa temizle
       setSearchQuery('');
     }
-
-    loadProducts(category || 'all', store || 'all');
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchParams, categories.length]);
+  }, [searchParams]);
+
+  // "Tüm kategoriler" — kategori listesini beklemeden ürünleri yükle (canlıda takılmayı önler)
+  useEffect(() => {
+    const categoryParam = searchParams.get('kategori') || 'all';
+    const store = searchParams.get('magaza') || 'all';
+    if (categoryParam !== 'all') return;
+    loadProducts(categoryParam, store);
+  }, [searchParams, loadProducts]);
+
+  // Slug ile kategori: liste hazır olunca yükle
+  useEffect(() => {
+    const categoryParam = searchParams.get('kategori') || 'all';
+    const store = searchParams.get('magaza') || 'all';
+    if (categoryParam === 'all' || !categoriesReady) return;
+    loadProducts(categoryParam, store);
+  }, [searchParams, categoriesReady, loadProducts]);
 
   // Filtered and sorted products
   const filteredProducts = useMemo(() => {

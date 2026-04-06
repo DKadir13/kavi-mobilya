@@ -1,6 +1,7 @@
-// API Helper Functions for MongoDB
+import { getPublicApiBaseUrl } from '@/lib/api-base';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || '/api';
+// API Helper Functions for MongoDB
+const API_BASE_URL = getPublicApiBaseUrl();
 
 export class ApiError extends Error {
   constructor(public status: number, message: string) {

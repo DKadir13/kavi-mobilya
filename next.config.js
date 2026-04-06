@@ -11,6 +11,16 @@ const nextConfig = {
       },
       {
         protocol: 'https',
+        hostname: 'kavimobilya.com',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'www.kavimobilya.com',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
         hostname: '**',
       },
     ],

@@ -80,12 +80,13 @@ async function connectDB() {
 
     const opts: mongoose.ConnectOptions = {
       bufferCommands: false,
-      // Serverless ortamda büyük pool gereksiz bağlantı açabilir
-      maxPoolSize: 5,
-      // Vercel cold start / transient network için daha toleranslı süreler
+      maxPoolSize: 10,
+      minPoolSize: 1,
       serverSelectionTimeoutMS: 30000,
-      socketTimeoutMS: 45000, // Close sockets after 45 seconds of inactivity
+      socketTimeoutMS: 0,
       connectTimeoutMS: 30000,
+      maxIdleTimeMS: 60000,
+      heartbeatFrequencyMS: 10000,
       ...(shouldForceIpv4 ? { family: 4 } : {}),
     };
 
