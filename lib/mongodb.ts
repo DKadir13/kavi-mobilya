@@ -1,6 +1,6 @@
 import mongoose from 'mongoose';
 
-const MONGODB_URI = process.env.MONGODB_URI;
+const uri = process.env.MONGODB_URI;
 const MONGODB_DB_NAME = process.env.MONGODB_DB_NAME || 'kavi_mobilya';
 
 // Validate MongoDB URI format - only at runtime, not during build
@@ -54,7 +54,7 @@ if (!global.mongoose) {
 async function connectDB() {
   // Validate URI only at runtime (when function is called), not during build
   try {
-    validateMongoUri(MONGODB_URI || '');
+    validateMongoUri(uri || '');
   } catch (error: any) {
     console.error('MongoDB URI validation error:', error.message);
     throw error;
@@ -83,8 +83,7 @@ async function connectDB() {
       ...(shouldForceIpv4 ? { family: 4 } : {}),
     };
 
-    // Trim URI in case there's whitespace
-    const trimmedUri = (MONGODB_URI || '').trim();
+    const trimmedUri = (uri || '').trim();
     const normalizedUri = ensureDbInMongoUri(trimmedUri, MONGODB_DB_NAME);
 
     cached.promise = mongoose.connect(normalizedUri, opts).then((mongoose) => {
