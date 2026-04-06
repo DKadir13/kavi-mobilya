@@ -1,6 +1,12 @@
 import mongoose from 'mongoose';
 
-const uri = process.env.MONGODB_URI;
+/** Yerel MongoDB (geliştirme). Production’da mutlaka MONGODB_URI env ile geçin. */
+const LOCAL_DEV_MONGODB_URI =
+  'mongodb://adminKullanici:GucluSifre123@127.0.0.1:27017/kavi_mobilya?authSource=admin';
+
+const uri =
+  (process.env.MONGODB_URI || '').trim() ||
+  (process.env.NODE_ENV !== 'production' ? LOCAL_DEV_MONGODB_URI : '');
 const MONGODB_DB_NAME = process.env.MONGODB_DB_NAME || 'kavi_mobilya';
 
 // Validate MongoDB URI format - only at runtime, not during build
