@@ -2,8 +2,8 @@
 
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { ArrowRight, Store, Award, Truck, Phone } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { ArrowRight, Store, Award, Truck, Phone, Sparkles } from 'lucide-react';
+import { useCallback, useEffect, useState } from 'react';
 import { productsApi } from '@/lib/api';
 import Image from 'next/image';
 import {
@@ -23,25 +23,63 @@ type Product = {
   price: number | null;
   featured_order?: number | null;
   images?: string[];
+  category_id?:
+    | string
+    | null
+    | {
+        _id: string;
+        name: string;
+        slug: string;
+      };
+};
+
+const featuredScrollClass = (index: number) => {
+  const delays = ['', 'scroll-reveal-delay-1', 'scroll-reveal-delay-2', 'scroll-reveal-delay-3'] as const;
+  return `scroll-reveal ${delays[index % 4] ?? ''}`.trim();
 };
 
 export default function Home() {
   const [featuredProducts, setFeaturedProducts] = useState<Product[]>([]);
   const [loadingFeatured, setLoadingFeatured] = useState(true);
+  const [featuredError, setFeaturedError] = useState<string | null>(null);
   const [api, setApi] = useState<CarouselApi>();
   const [current, setCurrent] = useState(0);
   const [showIntro, setShowIntro] = useState(true);
 
+  const loadFeaturedProducts = useCallback(async () => {
+    try {
+      setFeaturedError(null);
+      setLoadingFeatured(true);
+      const data = await productsApi.getFeatured();
+      const formattedData = data
+        .map((product: any) => ({
+          ...product,
+          id: product._id,
+        }))
+        .sort((a: Product, b: Product) => {
+          const orderA = a.featured_order ?? 999;
+          const orderB = b.featured_order ?? 999;
+          return orderA - orderB;
+        });
+      setFeaturedProducts(formattedData);
+    } catch (error) {
+      console.error('Featured products load error:', error);
+      setFeaturedProducts([]);
+      setFeaturedError('Öne çıkan ürünler yüklenirken bir sorun oluştu. Lütfen tekrar deneyin.');
+    } finally {
+      setLoadingFeatured(false);
+    }
+  }, []);
+
   useEffect(() => {
     loadFeaturedProducts();
-    
-    // Intro overlay - 3 saniye sonra gradyanlı geçişle kaybolsun
+
     const hideTimer = setTimeout(() => {
       setShowIntro(false);
     }, 3000);
 
     return () => clearTimeout(hideTimer);
-  }, []);
+  }, [loadFeaturedProducts]);
 
   useEffect(() => {
     if (!api) {
@@ -73,30 +111,6 @@ export default function Home() {
       clearInterval(autoplayInterval);
     };
   }, [api]);
-
-  const loadFeaturedProducts = async () => {
-    try {
-      setLoadingFeatured(true);
-      const data = await productsApi.getFeatured();
-      const formattedData = data
-        .map((product: any) => ({
-          ...product,
-          id: product._id,
-        }))
-        // featured_order'a göre sırala (1'den 6'ya kadar)
-        .sort((a: Product, b: Product) => {
-          const orderA = a.featured_order ?? 999;
-          const orderB = b.featured_order ?? 999;
-          return orderA - orderB;
-        });
-      setFeaturedProducts(formattedData);
-    } catch (error) {
-      console.error('Featured products load error:', error);
-      setFeaturedProducts([]);
-    } finally {
-      setLoadingFeatured(false);
-    }
-  };
 
   return (
     <div className="pt-24 sm:pt-28 md:pt-32 relative">
@@ -312,37 +326,85 @@ export default function Home() {
         </div>
       </section>
 
-        <section className="py-8 sm:py-12 md:py-16 bg-gray-50">
+        <section
+          id="one-cikan-urunler"
+          className="py-8 sm:py-12 md:py-16 bg-gray-50"
+          aria-labelledby="featured-heading"
+        >
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center mb-6 sm:mb-8 md:mb-12 scroll-reveal">
-              <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-[#0a0a0a] mb-2 sm:mb-3 md:mb-4">
+              <div className="inline-flex items-center justify-center gap-2 rounded-full bg-[#a42a2a]/10 px-3 py-1 mb-3 sm:mb-4">
+                <Sparkles className="h-4 w-4 text-[#a42a2a]" aria-hidden />
+                <span className="text-xs font-medium uppercase tracking-wide text-[#a42a2a]">
+                  Seçtiklerimiz
+                </span>
+              </div>
+              <h2
+                id="featured-heading"
+                className="text-xl sm:text-2xl md:text-3xl font-bold text-[#0a0a0a] mb-2 sm:mb-3 md:mb-4"
+              >
                 Öne Çıkan Ürünler
               </h2>
-              <p className="text-gray-600 text-sm sm:text-base">
-                En popüler ve beğenilen ürünlerimiz
+              <p className="text-gray-600 text-sm sm:text-base max-w-2xl mx-auto">
+                En popüler ürünlerimizi keşfedin; detay sayfasından sepete ekleyebilirsiniz.
               </p>
             </div>
 
           {loadingFeatured ? (
-            <div className="flex flex-col items-center justify-center py-8 sm:py-12">
-              <div className="animate-spin rounded-full h-8 w-8 sm:h-10 sm:w-10 border-b-2 border-[#a42a2a] mb-3 sm:mb-4"></div>
-              <p className="text-gray-600 text-sm sm:text-base">Ürünler yükleniyor...</p>
+            <div
+              className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5 md:gap-6"
+              aria-busy="true"
+              aria-label="Öne çıkan ürünler yükleniyor"
+            >
+              {[0, 1, 2, 3, 4, 5].map((i) => (
+                <div
+                  key={i}
+                  className="rounded-xl overflow-hidden bg-white shadow-md border border-gray-100"
+                >
+                  <div className="h-48 sm:h-56 md:h-64 bg-gradient-to-br from-gray-100 to-gray-200 animate-pulse" />
+                  <div className="p-3 sm:p-4 space-y-3">
+                    <div className="h-4 bg-gray-200 rounded animate-pulse w-4/5" />
+                    <div className="h-3 bg-gray-100 rounded animate-pulse w-1/2" />
+                    <div className="h-4 bg-gray-100 rounded animate-pulse w-1/3" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : featuredError ? (
+            <div className="text-center py-10 sm:py-14 rounded-xl bg-white border border-gray-200 shadow-sm max-w-lg mx-auto px-4">
+              <p className="text-gray-700 text-sm sm:text-base mb-4">{featuredError}</p>
+              <Button
+                type="button"
+                variant="outline"
+                className="border-[#a42a2a] text-[#a42a2a] hover:bg-[#a42a2a] hover:text-white"
+                onClick={() => loadFeaturedProducts()}
+              >
+                Tekrar dene
+              </Button>
             </div>
           ) : featuredProducts.length > 0 ? (
+            <>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5 md:gap-6">
               {featuredProducts.map((product, index) => {
-                // İlk resmi kullan (image_url veya images array'inden)
-                const displayImage = product.images && product.images.length > 0 
-                  ? product.images[0] 
-                  : product.image_url;
-                
+                const displayImage =
+                  product.images && product.images.length > 0
+                    ? product.images[0]
+                    : product.image_url;
+                const categoryLabel =
+                  product.category_id &&
+                  typeof product.category_id === 'object' &&
+                  'name' in product.category_id
+                    ? product.category_id.name
+                    : null;
+                const storeLabel =
+                  product.store_type === 'premium' ? 'Kavi Premium' : 'Kavi Home';
+                const metaLine = [categoryLabel, storeLabel].filter(Boolean).join(' · ');
+
                 return (
                   <Link
                     key={product._id}
                     href={`/urunler/${product._id}`}
-                    className={`group bg-white rounded-xl overflow-hidden shadow-md hover:shadow-xl transition-all scroll-reveal ${
-                      index === 0 ? '' : index === 1 ? 'scroll-reveal-delay-1' : 'scroll-reveal-delay-2'
-                    }`}
+                    className={`group bg-white rounded-xl overflow-hidden shadow-md hover:shadow-xl transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#a42a2a] focus-visible:ring-offset-2 ${featuredScrollClass(index)}`}
                   >
                     <div className="relative h-48 sm:h-56 md:h-64 bg-gray-100">
                       {displayImage ? (
@@ -350,42 +412,44 @@ export default function Home() {
                           <img
                             src={displayImage}
                             alt={product.name}
-                            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                           />
                         ) : (
                           <Image
                             src={displayImage}
                             alt={product.name}
                             fill
-                            className="object-cover group-hover:scale-110 transition-transform duration-300"
+                            className="object-cover group-hover:scale-105 transition-transform duration-300"
                             sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                            loading="lazy"
+                            priority={index === 0}
+                            loading={index === 0 ? 'eager' : 'lazy'}
                           />
                         )
                       ) : (
-                        <div className="h-full flex items-center justify-center text-gray-400">
+                        <div className="h-full flex items-center justify-center text-gray-400 text-sm">
                           Resim yok
                         </div>
                       )}
-                      {/* Sıra numarası badge (opsiyonel) */}
-                      {product.featured_order && (
-                        <div className="absolute top-2 left-2 bg-[#a42a2a] text-white text-xs font-bold px-2 py-1 rounded-full">
+                      {product.featured_order != null && (
+                        <div className="absolute top-2 left-2 bg-[#a42a2a] text-white text-xs font-bold px-2 py-1 rounded-full shadow-sm">
                           #{product.featured_order}
                         </div>
                       )}
                     </div>
                     <div className="p-3 sm:p-4">
-                      <h3 className="font-semibold text-sm sm:text-base md:text-lg mb-1 sm:mb-2 line-clamp-2">
+                      <h3 className="font-semibold text-sm sm:text-base md:text-lg mb-1 sm:mb-2 line-clamp-2 text-[#0a0a0a] group-hover:text-[#a42a2a] transition-colors">
                         {product.name}
                       </h3>
-                      <p className="text-xs sm:text-sm text-gray-500 mb-1 sm:mb-2">
-                        {product.store_type === 'premium'
-                          ? 'Kavi Premium'
-                          : 'Kavi Home'}
+                      <p className="text-xs sm:text-sm text-gray-500 mb-1 sm:mb-2 line-clamp-1">
+                        {metaLine}
                       </p>
-                      {product.price && (
+                      {product.price != null && (
                         <p className="text-[#a42a2a] font-bold text-xs sm:text-sm md:text-base">
-                          {product.price.toLocaleString('tr-TR')} TL
+                          {Number(product.price).toLocaleString('tr-TR', {
+                            minimumFractionDigits: 0,
+                            maximumFractionDigits: 0,
+                          })}{' '}
+                          TL
                         </p>
                       )}
                     </div>
@@ -393,13 +457,27 @@ export default function Home() {
                 );
               })}
             </div>
+            <div className="mt-8 sm:mt-10 flex justify-center scroll-reveal">
+              <Link href="/urunler">
+                <Button
+                  size="lg"
+                  variant="outline"
+                  className="border-[#a42a2a] text-[#a42a2a] hover:bg-[#a42a2a] hover:text-white gap-2"
+                >
+                  Tüm ürünleri incele
+                  <ArrowRight className="h-4 w-4" />
+                </Button>
+              </Link>
+            </div>
+            </>
           ) : (
-            <div className="text-center py-8 sm:py-12">
+            <div className="text-center py-8 sm:py-12 rounded-xl bg-white/80 border border-dashed border-gray-200">
               <p className="text-gray-500 text-sm sm:text-base md:text-lg">
                 Henüz öne çıkan ürün eklenmemiş.
               </p>
-              <p className="text-gray-400 text-xs sm:text-sm mt-2">
-                Yönetim panelinden öne çıkan ürün ekleyebilirsiniz.
+              <p className="text-gray-400 text-xs sm:text-sm mt-2 max-w-md mx-auto">
+                Yönetim panelinden en fazla 6 ürünü öne çıkarabilirsiniz; burada otomatik
+                listelenir.
               </p>
             </div>
           )}
