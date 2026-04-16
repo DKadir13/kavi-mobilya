@@ -1,0 +1,23 @@
+name: Kavi Mobilya Otomatik Deploy
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Sunucuya Baglan ve Guncelle
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.REMOTE_HOST }}
+          username: ${{ secrets.REMOTE_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            cd ~/kavi-mobilya
+            git pull origin main
+            npm install
+            npm run build
+            pm2 restart kavi-mobilya --update-env
+            echo '🚀 Guncelleme Basariyla Tamamlandi!'
