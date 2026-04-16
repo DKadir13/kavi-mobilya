@@ -73,6 +73,7 @@ export default function ProductsPage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [categoriesReady, setCategoriesReady] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [selectedStore, setSelectedStore] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -86,6 +87,7 @@ export default function ProductsPage() {
 
   const loadCategories = useCallback(async () => {
     try {
+      setLoadError(null);
       const data = await categoriesApi.getAll();
       const formatted = data.map((cat: any) => ({
         ...cat,
@@ -94,16 +96,10 @@ export default function ProductsPage() {
       setCategories(formatted);
     } catch (error: any) {
       console.error('Category load error:', error);
-      const errorMessage = error?.message || error?.toString() || 'Bilinmeyen hata';
-      
-      // MongoDB connection error için özel mesaj
-      if (errorMessage.includes('MongoDB') || errorMessage.includes('whitelist') || errorMessage.includes('Could not connect')) {
-        toast.error('MongoDB Bağlantı Hatası', {
-          description: 'IP adresiniz MongoDB Atlas whitelist\'inde değil. Lütfen MongoDB Atlas yönetim panelinden IP adresinizi ekleyin. Detaylar için MONGODB_IP_WHITELIST.md dosyasına bakın.',
-          duration: 15000,
-        });
-      }
-      // Diğer hatalar için silent fail
+      const errorMessage =
+        error?.message || error?.error || error?.toString() || 'Kategoriler yüklenemedi';
+      setLoadError(errorMessage);
+      toast.error('Kategoriler yüklenemedi', { description: errorMessage });
     } finally {
       setCategoriesReady(true);
     }
@@ -115,6 +111,7 @@ export default function ProductsPage() {
   const loadProducts = useCallback(async (category: string, store: string) => {
     setLoading(true);
     try {
+      setLoadError(null);
       const cat = categoriesRef.current.find((c) => c.slug === category);
       
       const params: any = { is_active: true, include_sub_items_minimal: true };
@@ -137,16 +134,10 @@ export default function ProductsPage() {
       setCurrentPage(1); // Reset to first page when filters change
     } catch (error: any) {
       console.error('Product load error:', error);
-      const errorMessage = error?.message || error?.toString() || 'Bilinmeyen hata';
-      
-      // MongoDB connection error için özel mesaj (sadece ilk hatada göster)
-      if (errorMessage.includes('MongoDB') || errorMessage.includes('whitelist') || errorMessage.includes('Could not connect')) {
-        toast.error('MongoDB Bağlantı Hatası', {
-          description: 'IP adresiniz MongoDB Atlas whitelist\'inde değil. Lütfen MongoDB Atlas yönetim panelinden IP adresinizi ekleyin. Detaylar için MONGODB_IP_WHITELIST.md dosyasına bakın.',
-          duration: 15000,
-        });
-      }
-      // Diğer hatalar için silent fail
+      const errorMessage =
+        error?.message || error?.error || error?.toString() || 'Ürünler yüklenemedi';
+      setLoadError(errorMessage);
+      toast.error('Ürünler yüklenemedi', { description: errorMessage });
     } finally {
       setLoading(false);
     }
@@ -392,6 +383,23 @@ export default function ProductsPage() {
           <div className="flex flex-col items-center justify-center py-20">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#a42a2a] mb-4"></div>
             <p className="text-lg font-medium text-gray-700">Ürünler yükleniyor, lütfen bekleyin...</p>
+          </div>
+        ) : loadError ? (
+          <div className="flex flex-col items-center justify-center py-16 px-4 bg-white rounded-xl shadow">
+            <p className="text-red-600 font-medium mb-2">Ürünler yüklenemedi</p>
+            <p className="text-gray-600 text-sm text-center mb-4 max-w-2xl break-words">
+              {loadError}
+            </p>
+            <Button
+              onClick={() => {
+                const categoryParam = searchParams.get('kategori') || selectedCategory || 'all';
+                const store = searchParams.get('magaza') || selectedStore || 'all';
+                loadProducts(categoryParam, store);
+              }}
+              className="bg-[#a42a2a] hover:bg-[#8a2222]"
+            >
+              Yeniden dene
+            </Button>
           </div>
         ) : (
           <>

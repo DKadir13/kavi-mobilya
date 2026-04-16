@@ -123,6 +123,8 @@ export default function ProductsManagementPage() {
   const [bulkPriceType, setBulkPriceType] = useState<'fixed' | 'percent'>('percent');
   const [bulkPriceValue, setBulkPriceValue] = useState('');
   const [bulkPriceSubmitting, setBulkPriceSubmitting] = useState(false);
+  const [inlinePriceEdits, setInlinePriceEdits] = useState<Record<string, string>>({});
+  const [inlinePriceSaving, setInlinePriceSaving] = useState<Set<string>>(new Set());
   const debouncedSearchTerm = useDebounce(searchTerm, 300);
 
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -598,6 +600,63 @@ export default function ProductsManagementPage() {
     }
   }, [bulkPriceValue, bulkPriceType, selectedIds, products]);
 
+  const beginInlinePriceEdit = useCallback((id: string, currentPrice: number | null) => {
+    setInlinePriceEdits((prev) => ({
+      ...prev,
+      [id]: prev[id] ?? (currentPrice ?? '').toString(),
+    }));
+  }, []);
+
+  const cancelInlinePriceEdit = useCallback((id: string) => {
+    setInlinePriceEdits((prev) => {
+      const next = { ...prev };
+      delete next[id];
+      return next;
+    });
+  }, []);
+
+  const saveInlinePrice = useCallback(async (id: string) => {
+    const raw = (inlinePriceEdits[id] ?? '').toString().trim().replace(',', '.');
+    const value = raw === '' ? null : Number.parseFloat(raw);
+    if (raw !== '' && (Number.isNaN(value) || value < 0)) {
+      toast.error('Geçerli bir fiyat girin');
+      return;
+    }
+    if (inlinePriceSaving.has(id)) return;
+
+    setInlinePriceSaving((prev) => new Set(prev).add(id));
+    const before = products.find((p) => (p._id || p.id) === id)?.price ?? null;
+
+    // optimistic update
+    setProducts((prev) =>
+      prev.map((p) => {
+        if ((p._id || p.id) !== id) return p;
+        return { ...p, price: value };
+      })
+    );
+
+    try {
+      await productsApi.update(id, { price: value });
+      toast.success('Fiyat güncellendi');
+      cancelInlinePriceEdit(id);
+    } catch (e: any) {
+      // rollback
+      setProducts((prev) =>
+        prev.map((p) => {
+          if ((p._id || p.id) !== id) return p;
+          return { ...p, price: before };
+        })
+      );
+      toast.error(e?.message || 'Fiyat güncellenemedi');
+    } finally {
+      setInlinePriceSaving((prev) => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
+    }
+  }, [inlinePriceEdits, inlinePriceSaving, products, cancelInlinePriceEdit]);
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -747,7 +806,7 @@ export default function ProductsManagementPage() {
                       {uploadingImages ? 'Yükleniyor...' : 'Resimleri seçin veya sürükleyin'}
                     </span>
                     <span className="text-xs text-gray-400">
-                      Birden fazla resim seçebilirsiniz (Max 5MB/resim)
+                      Birden fazla resim seçebilirsiniz (varsayılan max 25MB/resim)
                     </span>
                   </label>
                 </div>
@@ -1104,6 +1163,8 @@ export default function ProductsManagementPage() {
                       ? product.category_id.name
                       : null;
                   const productId = product._id || product.id || '';
+                  const isEditingPrice = Object.prototype.hasOwnProperty.call(inlinePriceEdits, productId);
+                  const isSavingPrice = inlinePriceSaving.has(productId);
 
                   return (
                     <tr key={productId} className="hover:bg-gray-50">
@@ -1169,9 +1230,62 @@ export default function ProductsManagementPage() {
                       </span>
                     </td>
                     <td className="px-4 py-3 font-medium">
-                      {product.price
-                        ? `${product.price.toLocaleString('tr-TR')} TL`
-                        : '-'}
+                      <div className="flex items-center justify-end gap-2">
+                        {isEditingPrice ? (
+                          <>
+                            <Input
+                              type="number"
+                              step="0.01"
+                              min={0}
+                              value={inlinePriceEdits[productId] ?? ''}
+                              onChange={(e) =>
+                                setInlinePriceEdits((prev) => ({
+                                  ...prev,
+                                  [productId]: e.target.value,
+                                }))
+                              }
+                              className="w-28 h-8 text-right"
+                              disabled={isSavingPrice}
+                            />
+                            <Button
+                              type="button"
+                              size="sm"
+                              className="h-8 bg-[#a42a2a] hover:bg-[#8a2222]"
+                              onClick={() => saveInlinePrice(productId)}
+                              disabled={isSavingPrice}
+                            >
+                              {isSavingPrice ? '...' : 'Kaydet'}
+                            </Button>
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              className="h-8"
+                              onClick={() => cancelInlinePriceEdit(productId)}
+                              disabled={isSavingPrice}
+                            >
+                              İptal
+                            </Button>
+                          </>
+                        ) : (
+                          <>
+                            <span className="min-w-[110px] text-right">
+                              {product.price !== null && product.price !== undefined
+                                ? `${product.price.toLocaleString('tr-TR')} TL`
+                                : '-'}
+                            </span>
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              className="h-8"
+                              onClick={() => beginInlinePriceEdit(productId, product.price ?? null)}
+                            >
+                              Düzenle
+                            </Button>
+                          </>
+                        )}
+                      </div>
                     </td>
                     <td className="px-4 py-3">
                       <span

@@ -23,6 +23,14 @@ const PUBLIC_UPLOAD_BASE_URL =
 
 const UPLOAD_DIR = join(process.cwd(), 'public', 'uploads');
 
+const MAX_FILE_SIZE_MB = Number.parseFloat(
+  (process.env.UPLOAD_MAX_FILE_SIZE_MB || '25').trim()
+);
+const MAX_FILE_SIZE_BYTES =
+  Number.isFinite(MAX_FILE_SIZE_MB) && MAX_FILE_SIZE_MB > 0
+    ? Math.floor(MAX_FILE_SIZE_MB * 1024 * 1024)
+    : 25 * 1024 * 1024;
+
 function publicUrlForFile(fileName: string) {
   return `${PUBLIC_UPLOAD_BASE_URL}/uploads/${fileName}`;
 }
@@ -73,8 +81,10 @@ export async function POST(request: NextRequest) {
         continue;
       }
 
-      if (file.size > 10 * 1024 * 1024) {
-        errors.push(`${file.name}: Dosya boyutu çok büyük (max 10MB)`);
+      if (file.size > MAX_FILE_SIZE_BYTES) {
+        errors.push(
+          `${file.name}: Dosya boyutu çok büyük (max ${MAX_FILE_SIZE_MB}MB)`
+        );
         continue;
       }
 
@@ -133,13 +143,14 @@ export async function POST(request: NextRequest) {
     }
 
     if (uploadedFiles.length === 0) {
+      const hasTooLarge = errors.some((e) => e.includes('Dosya boyutu çok büyük'));
       return NextResponse.json(
         {
           error: 'Hiçbir dosya yüklenemedi',
           details:
             errors.length > 0 ? errors : ['Geçerli resim dosyası bulunamadı'],
         },
-        { status: 400 }
+        { status: hasTooLarge ? 413 : 400 }
       );
     }
 
