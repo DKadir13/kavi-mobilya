@@ -618,8 +618,8 @@ export default function ProductsManagementPage() {
   const saveInlinePrice = useCallback(async (id: string) => {
     const raw = (inlinePriceEdits[id] ?? '').toString().trim().replace(',', '.');
     const value = raw === '' ? null : Number.parseFloat(raw);
-    if (raw !== '' && (Number.isNaN(value) || value < 0)) {
-      toast.error('Geçerli bir fiyat girin');
+    // TS daraltma: `value` null olursa `< 0` karşılaştırması yapmayalım.
+    if (raw !== '' && (value === null || Number.isNaN(value) || value < 0)) {      toast.error('Geçerli bir fiyat girin');
       return;
     }
     if (inlinePriceSaving.has(id)) return;
