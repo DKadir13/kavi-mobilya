@@ -16,7 +16,7 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
             cd ~/kavi-mobilya
-            git pull origin main
+            git fetch --all && git reset --hard origin/main
             npm install
             npm run build
             pm2 restart kavi-mobilya --update-env
